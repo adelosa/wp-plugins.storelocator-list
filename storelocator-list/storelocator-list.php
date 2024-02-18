@@ -40,7 +40,7 @@ wp_register_style(
 
 function sllist_shortcode( $atts = [], $content = null ) {
 	
-	$data = sllist_db_query();
+	$data = sllist_db_query(3);
 	
 	# add the table header
 	$content = <<<EOD
@@ -48,7 +48,7 @@ function sllist_shortcode( $atts = [], $content = null ) {
 		<table>
 			<thead>
 				<tr>
-					<th>Location</th>
+					<th style="width:25%">Location</th>
 					<th>Details</th>
 				</tr>
 			</thead>
@@ -106,8 +106,25 @@ function make_address($store) {
 	return $output;
 }
 
-function sllist_db_query() {
+function sllist_db_query($term_id = NULL) {
+	print("term_id=$term_id");
 	global $wpdb;
+
+	$join_sql = "";
+	if ($term_id != NULL) {	
+		$join_sql = <<<EOD
+		join `wp_term_relationships`
+		on `wp_term_relationships`.`object_id` = `wp_posts`.`ID`
+		join `wp_terms`
+		on `wp_terms`.`term_id` = `wp_term_relationships`.`term_taxonomy_id`
+		EOD;
+	}
+
+	$where_sql = "where wp_posts.post_status in ('publish', 'pending')";
+	if ($term_id != NULL) {
+		$where_sql .= "and `wp_terms`.`term_id` = $term_id";
+	}
+
 	$query_string = <<<EOD
 	select 
 	* 
@@ -144,9 +161,11 @@ function sllist_db_query() {
 		GROUP by post_id
 	) as a 
 	on a.post_id = ID
-	where wp_posts.post_status in ('publish', 'pending')
+	$join_sql
+	$where_sql
 	order by a.wpsl_city asc;
 	EOD;
+	print("query=$query_string");
 	$results = $wpdb->get_results($query_string);
 	return $results;
 }

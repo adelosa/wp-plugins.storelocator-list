@@ -38,9 +38,19 @@ wp_register_style(
 );
 
 
-function sllist_shortcode( $atts = [], $content = null ) {
-	
-	$data = sllist_db_query(3);
+function sllist_shortcode( $atts = [], $content = null, $tag = "" ) {
+
+	// normalize attribute keys, lowercase
+	$atts = array_change_key_case( (array) $atts, CASE_LOWER );
+
+	// override default attributes with user attributes
+	$sllist_atts = shortcode_atts(
+		array(
+			'term_id' => null,
+		), $atts, $tag
+	);
+
+	$data = sllist_db_query($sllist_atts['term_id']);
 	
 	# add the table header
 	$content = <<<EOD
@@ -107,7 +117,7 @@ function make_address($store) {
 }
 
 function sllist_db_query($term_id = NULL) {
-	print("term_id=$term_id");
+
 	global $wpdb;
 
 	$join_sql = "";
@@ -165,7 +175,6 @@ function sllist_db_query($term_id = NULL) {
 	$where_sql
 	order by a.wpsl_city asc;
 	EOD;
-	print("query=$query_string");
 	$results = $wpdb->get_results($query_string);
 	return $results;
 }

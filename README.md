@@ -26,4 +26,4 @@ Add the following shortcode where you want to display the list
     [sllist]
 
 ## Licence
-See [LICENSE](LICENSE)
+See [LICENCE](LICENCE)

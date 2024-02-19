@@ -86,7 +86,13 @@ function sllist_shortcode( $atts = [], $content = null, $tag = "" ) {
 		$content .= <<<EOD
 			<br />$address
 			<br /><i class="fa-solid fa-phone"></i> <a href="tel:$store->wpsl_phone">$store->wpsl_phone</a>
-			<br /><i class="fa-solid fa-envelope"></i> <a href="mailto:$store->wpsl_email">$store->wpsl_email</a>
+		EOD;
+		
+		if ($store->wpsl_email != "") {
+			$content .= "<br /><i class='fa-solid fa-envelope'></i> <a href='mailto:$store->wpsl_email'>$store->wpsl_email</a>";
+		}
+
+		$content .= <<<EOD
 			<br />$store->post_content</td>
 		</tr>
 		EOD;
@@ -116,66 +122,48 @@ function make_address($store) {
 	return $output;
 }
 
-function sllist_db_query($term_id = NULL) {
+function sllist_db_query($term_id = null) {
 
 	global $wpdb;
 
 	$join_sql = "";
-	if ($term_id != NULL) {	
+	if ($term_id != null) {
 		$join_sql = <<<EOD
-		join `wp_term_relationships`
-		on `wp_term_relationships`.`object_id` = `wp_posts`.`ID`
-		join `wp_terms`
-		on `wp_terms`.`term_id` = `wp_term_relationships`.`term_taxonomy_id`
+		join wp_term_relationships
+		on wp_term_relationships.object_id = p.ID
 		EOD;
 	}
 
-	$where_sql = "where wp_posts.post_status in ('publish', 'pending')";
-	if ($term_id != NULL) {
-		$where_sql .= "and `wp_terms`.`term_id` = $term_id";
+	$where_sql = "";
+	if ($term_id != null) {
+		$where_sql .= "and wp_term_relationships.term_taxonomy_id = $term_id";
 	}
 
 	$query_string = <<<EOD
-	select 
-	* 
-	from 
-	wp_posts
-	join (
 	SELECT 
-		post_id, 
-		max(wpsl_address) as wpsl_address,
-		max(wpsl_address2) as wpsl_address2,
-		max(wpsl_city) as wpsl_city,
-		max(wpsl_state) as wpsl_state,
-		max(wpsl_zip) as wpsl_zip,
-		max(wpsl_country) as wpsl_country,
-		max(wpsl_phone) as wpsl_phone,
-		max(wpsl_email) as wpsl_email,
-		max(wpsl_url) as wpsl_url
-		FROM (
-			SELECT
-			post_id,
-			CASE when meta_key = "wpsl_address" then meta_value end as wpsl_address,
-			CASE when meta_key = "wpsl_address2" then meta_value end as wpsl_address2,
-			CASE when meta_key = "wpsl_city" then meta_value end as wpsl_city,
-			CASE when meta_key = "wpsl_state" then meta_value end as wpsl_state,
-			CASE when meta_key = "wpsl_zip" then meta_value end as wpsl_zip,
-			CASE when meta_key = "wpsl_country" then meta_value end as wpsl_country,
-			CASE when meta_key = "wpsl_phone" then meta_value end as wpsl_phone,
-			CASE when meta_key = "wpsl_email" then meta_value end as wpsl_email,
-			CASE when meta_key = "wpsl_url" then meta_value end as wpsl_url
-			FROM wp_postmeta
-			WHERE 
-			LEFT(meta_key,5) = 'wpsl_'
-		) as a
-		GROUP by post_id
-	) as a 
-	on a.post_id = ID
+	p.*,
+	max(IF(m.meta_key='wpsl_address',m.meta_value,"")) as wpsl_address,
+	max(IF(m.meta_key='wpsl_address2',m.meta_value,"")) as wpsl_address2,
+	max(IF(m.meta_key='wpsl_city',m.meta_value,"")) as wpsl_city,
+	max(IF(m.meta_key='wpsl_state',m.meta_value,"")) as wpsl_state,
+	max(IF(m.meta_key='wpsl_zip',m.meta_value,"")) as wpsl_zip,
+	max(IF(m.meta_key='wpsl_country',m.meta_value,"")) as wpsl_country,
+	max(IF(m.meta_key='wpsl_phone',m.meta_value,"")) as wpsl_phone,
+	max(IF(m.meta_key='wpsl_email',m.meta_value,"")) as wpsl_email,
+	max(IF(m.meta_key='wpsl_url',m.meta_value,"")) as wpsl_url
+	FROM wp_postmeta m
+	INNER JOIN wp_posts p
+	ON m.post_id = p.id
 	$join_sql
+	WHERE p.post_type = 'wpsl_stores'
+	AND p.post_status in ('publish', 'pending')
 	$where_sql
-	order by a.wpsl_city asc;
+	GROUP BY m.post_id
+	ORDER by wpsl_city asc;
 	EOD;
+
 	$results = $wpdb->get_results($query_string);
+
 	return $results;
 }
 

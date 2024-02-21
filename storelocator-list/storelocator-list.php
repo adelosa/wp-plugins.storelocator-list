@@ -22,22 +22,6 @@ Version: 0.0.1
  * @return string Shortcode output.
  */
 
-$block_style_deps = array();
-
-if( function_exists('wp_should_load_separate_core_block_assets') ) {
-    if( wp_should_load_separate_core_block_assets() === true ) {
-        $my_block_style_deps[] = "wp-block-table";
-    }
-}
-
-wp_register_style(
-  'sllist_css',
-   FALSE,
-   $block_style_deps,
-   NULL
-);
-
-
 function sllist_shortcode( $atts = [], $content = null, $tag = "" ) {
 
 	// normalize attribute keys, lowercase
@@ -110,6 +94,19 @@ function sllist_shortcodes_init() {
 	add_shortcode( 'sllist', 'sllist_shortcode' );
 }
 
+function sllist_register_style() {
+	$block_style_deps = array();
+
+	if( function_exists('wp_should_load_separate_core_block_assets') ) {
+		if( wp_should_load_separate_core_block_assets() === true ) {
+			$block_style_deps[] = "wp-block-table";
+		}
+	}
+	wp_register_style('sllist_css', false, $block_style_deps, null);
+	wp_enqueue_style('sllist_css');	
+}
+
+add_action( 'wp_enqueue_scripts', 'sllist_register_style');
 add_action( 'init', 'sllist_shortcodes_init' );
 
 function make_address($store) {

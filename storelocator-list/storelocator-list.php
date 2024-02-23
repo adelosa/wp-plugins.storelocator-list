@@ -37,7 +37,7 @@ function sllist_shortcode( $atts = [], $content = null, $tag = "" ) {
 	$data = sllist_db_query($sllist_atts['term_id']);
 	
 	# add the table header
-	$content = <<<EOD
+	$content = <<<HTML
 		<figure class="wp-block-table" style="width:100%">
 		<table>
 			<thead>
@@ -47,37 +47,37 @@ function sllist_shortcode( $atts = [], $content = null, $tag = "" ) {
 				</tr>
 			</thead>
 			<tbody>
-		EOD;
+		HTML;
 
 	# add the rows
 	foreach($data as $store) {
 		$address = "??";
 		$address = make_address($store);
 		
-		$content .= <<<EOD
+		$content .= <<<HTML
 		<tr>
 			<td><b>$store->wpsl_city</b></td>
 			<td>
 			   <b>$store->post_title</b>
-		EOD;
+		HTML;
 
 		if ($store->wpsl_url != NULL) {
 			$content .=	"<br /><a href='$store->wpsl_url'>Class website</a>";
 		}
 		
-		$content .= <<<EOD
+		$content .= <<<HTML
 			<br />$address
 			<br /><i class="fa-solid fa-phone"></i> <a href="tel:$store->wpsl_phone">$store->wpsl_phone</a>
-		EOD;
+		HTML;
 		
 		if ($store->wpsl_email != "") {
 			$content .= "<br /><i class='fa-solid fa-envelope'></i> <a href='mailto:$store->wpsl_email'>$store->wpsl_email</a>";
 		}
 
-		$content .= <<<EOD
+		$content .= <<<HTML
 			<br />$store->post_content</td>
 		</tr>
-		EOD;
+		HTML;
 	}
 
 	# complete the table
@@ -123,10 +123,10 @@ function sllist_db_query($term_id = null) {
 
 	$join_sql = "";
 	if ($term_id != null) {
-		$join_sql = <<<EOD
+		$join_sql = <<<SQL
 		join {$wpdb->prefix}term_relationships
 		on {$wpdb->prefix}term_relationships.object_id = p.ID
-		EOD;
+		SQL;
 	}
 
 	$where_sql = "";
@@ -134,7 +134,7 @@ function sllist_db_query($term_id = null) {
 		$where_sql .= "and {$wpdb->prefix}term_relationships.term_taxonomy_id = $term_id";
 	}
 
-	$query_string = <<<EOD
+	$query_string = <<<SQL
 	SELECT 
 	p.*,
 	max(IF(m.meta_key='wpsl_address',m.meta_value,"")) as wpsl_address,
@@ -155,7 +155,7 @@ function sllist_db_query($term_id = null) {
 	$where_sql
 	GROUP BY m.post_id
 	ORDER by wpsl_city asc;
-	EOD;
+	SQL;
 
 	$results = $wpdb->get_results($query_string);
 

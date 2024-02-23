@@ -61,8 +61,6 @@ function sllist_shortcode( $atts = [], $content = null, $tag = "" ) {
 			   <b>$store->post_title</b>
 		EOD;
 
-		// <button onclick="window.location.href='/?post_type=wpsl_stores&p=$store->ID';">More</button>
-
 		if ($store->wpsl_url != NULL) {
 			$content .=	"<br /><a href='$store->wpsl_url'>Class website</a>";
 		}
@@ -126,14 +124,14 @@ function sllist_db_query($term_id = null) {
 	$join_sql = "";
 	if ($term_id != null) {
 		$join_sql = <<<EOD
-		join wp_term_relationships
-		on wp_term_relationships.object_id = p.ID
+		join {$wpdb->prefix}term_relationships
+		on {$wpdb->prefix}term_relationships.object_id = p.ID
 		EOD;
 	}
 
 	$where_sql = "";
 	if ($term_id != null) {
-		$where_sql .= "and wp_term_relationships.term_taxonomy_id = $term_id";
+		$where_sql .= "and {$wpdb->prefix}term_relationships.term_taxonomy_id = $term_id";
 	}
 
 	$query_string = <<<EOD
@@ -148,8 +146,8 @@ function sllist_db_query($term_id = null) {
 	max(IF(m.meta_key='wpsl_phone',m.meta_value,"")) as wpsl_phone,
 	max(IF(m.meta_key='wpsl_email',m.meta_value,"")) as wpsl_email,
 	max(IF(m.meta_key='wpsl_url',m.meta_value,"")) as wpsl_url
-	FROM wp_postmeta m
-	INNER JOIN wp_posts p
+	FROM {$wpdb->prefix}postmeta m
+	INNER JOIN {$wpdb->prefix}posts p
 	ON m.post_id = p.id
 	$join_sql
 	WHERE p.post_type = 'wpsl_stores'

@@ -124,14 +124,14 @@ function sllist_db_query($term_id = null) {
 	$join_sql = "";
 	if ($term_id != null) {
 		$join_sql = <<<SQL
-		join {$wpdb->prefix}term_relationships
-		on {$wpdb->prefix}term_relationships.object_id = p.ID
+		join {$wpdb->term_relationships}
+		on {$wpdb->term_relationships}.object_id = p.ID
 		SQL;
 	}
 
 	$where_sql = "";
 	if ($term_id != null) {
-		$where_sql .= "and {$wpdb->prefix}term_relationships.term_taxonomy_id = $term_id";
+		$where_sql .= "and {$wpdb->term_relationships}.term_taxonomy_id = $term_id";
 	}
 
 	$query_string = <<<SQL
@@ -146,8 +146,8 @@ function sllist_db_query($term_id = null) {
 	max(IF(m.meta_key='wpsl_phone',m.meta_value,"")) as wpsl_phone,
 	max(IF(m.meta_key='wpsl_email',m.meta_value,"")) as wpsl_email,
 	max(IF(m.meta_key='wpsl_url',m.meta_value,"")) as wpsl_url
-	FROM {$wpdb->prefix}postmeta m
-	INNER JOIN {$wpdb->prefix}posts p
+	FROM {$wpdb->postmeta} m
+	INNER JOIN {$wpdb->posts} p
 	ON m.post_id = p.id
 	$join_sql
 	WHERE p.post_type = 'wpsl_stores'

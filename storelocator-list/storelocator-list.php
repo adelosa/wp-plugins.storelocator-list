@@ -87,6 +87,7 @@ function sllist_shortcode( $atts = [], $content = null, $tag = "" ) {
 		'orderby' => 'meta_value',
 		'order' => 'ASC',
 		'meta_key' => 'wpsl_city',
+		'nopaging' => true,
 	);
 	
 	// add store category filter if provided

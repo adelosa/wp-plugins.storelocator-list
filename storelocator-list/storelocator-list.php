@@ -64,6 +64,7 @@ function sllist_shortcode( $atts = [], $content = null, $tag = "" ) {
         array(
             'category_slug' => null,
 			'show_map' => False,
+			'state' => False,
         ), $atts, $tag
     );
 
@@ -100,7 +101,17 @@ function sllist_shortcode( $atts = [], $content = null, $tag = "" ) {
 		);
 		$query_args['tax_query'] = array($tax_query);
 	}
-    
+
+	// add state filter if provided
+	$state = $sllist_atts['state']; 
+	if ($state != null) {
+		$meta_query = array(
+			'key' => 'wpsl_state',
+			'value' => $state,
+		);
+		$query_args['meta_query'] = array($meta_query);
+	}
+	
 	$store_loop = new WP_Query( $query_args );
 
     if ( $store_loop->have_posts() ) {

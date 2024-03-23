@@ -5,7 +5,7 @@
  */
 /*
 Plugin Name: WP Store Locator List
-Plugin URI: http://bankteksystems.com.au/
+Plugin URI: https://github.com/adelosa/wp-plugins.storelocator-list
 Description: Provides ability to add list of stores via shortcode
 Author: Anthony Delosa
 Version: 0.1.0
@@ -129,12 +129,15 @@ function sllist_shortcode( $atts = [], $content = null, $tag = "" ) {
             <tr>
                 <td><b>{$store->meta->wpsl_city}</b></td>
                 <td>
-                    <b>{$store->post_title}</b>
             HTML;
 
             if (property_exists($store->meta, 'wpsl_url')) {
-                $content .=	"<br /><a href='{$store->meta->wpsl_url}'>Class website</a>";
+                $content .=	"<a href='{$store->meta->wpsl_url}'><b>{$store->post_title}</b> <i class='fa-solid fa-arrow-up-right-from-square'></i></a>";
             }
+			else {
+				$content .= "<b>{$store->post_title}</b>";
+			}
+
 			$address = make_address($store);
             $content .= "<br />{$address}";
 

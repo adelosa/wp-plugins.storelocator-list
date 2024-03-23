@@ -23,7 +23,57 @@ The [Font Awesome plugin](https://wordpress.org/plugins/font-awesome/) plugin is
 
 Add the following shortcode where you want to display the list
 
-    [sllist]
+| shortcode                          | Use                        |
+|------------------------------------|----------------------------|
+| \[sllist]                          | list all stores            |
+| \[sllist category_slug={slugname}] | list stores under category |  
+| \[sllist state={state}]            | list stores with state     |
 
 ## Licence
 See [LICENCE](LICENCE)
+
+## Development
+
+### Initial setup
+
+You will need docker and docker-compose installed
+
+Start the environment for first time:
+
+    docker compose up
+
+Wordpress installation will be available at http://localhost:8080
+
+Complete the installation of Wordpress.
+
+Update the permissions for the Wordpress plugins directory so you 
+can install/update the plugin as you develop:
+
+    sudo chmod -R +777 wordpress/wp-content/plugins
+
+Install the storelocator-list plugin:
+
+    ./update.sh
+
+Login as admin and install and activate the required plugins:
+
+    * WP Store Locator
+    * Font Awesome
+
+Activate storelocator-list plugin.
+
+### Ongoing
+
+Start the dev environment:
+
+    docker compose up
+
+Wordpress will be available at http://localhost:8080
+
+Update plugin for use:
+
+    ./update.sh
+
+Shutdown the dev environment:
+
+    docker compose down

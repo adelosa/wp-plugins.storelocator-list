@@ -44,6 +44,33 @@ function sllist_init_plugin() {
 add_action('plugins_loaded', 'sllist_init_plugin');
 
 /**
+ * Ensure shortcode is registered (fallback)
+ */
+function sllist_register_shortcode_fallback() {
+    if (!shortcode_exists('sllist')) {
+        add_shortcode('sllist', 'sllist_shortcode_fallback');
+    }
+}
+add_action('init', 'sllist_register_shortcode_fallback', 20);
+
+/**
+ * Fallback shortcode function
+ */
+function sllist_shortcode_fallback($atts = [], $content = null, $tag = "") {
+    // Ensure the new system is loaded
+    if (!class_exists('StoreLocatorList\Core\SLList_Shortcodes')) {
+        sllist_init_plugin();
+    }
+    
+    if (class_exists('StoreLocatorList\Core\SLList_Shortcodes')) {
+        $shortcodes = new \StoreLocatorList\Core\SLList_Shortcodes();
+        return $shortcodes->sllist_shortcode($atts, $content, $tag);
+    }
+    
+    return '<div class="sllist-error">Store locator plugin not properly initialized.</div>';
+}
+
+/**
  * Legacy function support for backward compatibility
  * These functions are deprecated and will be removed in a future version
  */
@@ -52,15 +79,7 @@ add_action('plugins_loaded', 'sllist_init_plugin');
  * @deprecated 0.2.0 Use StoreLocatorList\Core\SLList_Shortcodes::sllist_shortcode() instead
  */
 function sllist_shortcode($atts = [], $content = null, $tag = "") {
-    _deprecated_function(__FUNCTION__, '0.2.0', 'StoreLocatorList\Core\SLList_Shortcodes::sllist_shortcode()');
-    
-    // Ensure the new system is loaded
-    if (!class_exists('StoreLocatorList\Core\SLList_Shortcodes')) {
-        sllist_init_plugin();
-    }
-    
-    $shortcodes = new \StoreLocatorList\Core\SLList_Shortcodes();
-    return $shortcodes->sllist_shortcode($atts, $content, $tag);
+    return sllist_shortcode_fallback($atts, $content, $tag);
 }
 
 /**

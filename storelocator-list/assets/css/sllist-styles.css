@@ -183,24 +183,290 @@
     100% { transform: rotate(360deg); }
 }
 
-/* Responsive design */
+/* Store Manager/Search Page Styles */
+.sllist-store-manager-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.sllist-search-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.sllist-search-header h1 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.sllist-search-header p {
+    color: #666;
+    font-size: 16px;
+}
+
+.sllist-search-form {
+    background: #f9f9f9;
+    padding: 30px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.sllist-search-input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    transition: border-color 0.3s ease;
+}
+
+.sllist-search-input:focus {
+    border-color: #0073aa;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1);
+}
+
+.sllist-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 8px;
+}
+
+.sllist-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.sllist-checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+/* Search Results */
+.sllist-search-results {
+    margin-top: 30px;
+}
+
+.sllist-search-results h3 {
+    color: #333;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.sllist-results-container {
+    display: grid;
+    gap: 20px;
+}
+
+.sllist-store-result {
+    display: flex;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.sllist-store-result:hover {
+    border-color: #0073aa;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.sllist-store-info {
+    flex: 1;
+    margin-right: 20px;
+}
+
+.sllist-store-name {
+    color: #0073aa;
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.sllist-store-address,
+.sllist-store-contact {
+    margin-bottom: 8px;
+    color: #666;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.sllist-store-address i,
+.sllist-store-contact i {
+    margin-top: 2px;
+    width: 14px;
+    color: #999;
+}
+
+.sllist-store-description {
+    margin-top: 12px;
+    color: #666;
+    line-height: 1.5;
+    font-style: italic;
+}
+
+.sllist-store-actions {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 160px;
+}
+
+.sllist-request-access-btn {
+    background: #0073aa;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.sllist-request-access-btn:hover {
+    background: #005a87;
+}
+
+.sllist-request-access-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Pagination */
+.sllist-pagination {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.sllist-pagination-wrapper {
+    display: inline-flex;
+    gap: 5px;
+    background: white;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.sllist-page-btn {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #333;
+    text-decoration: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.sllist-page-btn:hover {
+    background: #f5f5f5;
+    border-color: #999;
+}
+
+.sllist-page-btn.active {
+    background: #0073aa;
+    color: white;
+    border-color: #0073aa;
+}
+
+.sllist-page-btn:disabled {
+    background: #f5f5f5;
+    color: #999;
+    cursor: not-allowed;
+}
+
+/* No Results */
+.sllist-no-results {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-size: 16px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+/* Loading States */
+.sllist-loading {
+    position: relative;
+    opacity: 0.7;
+}
+
+.sllist-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0073aa;
+    border-radius: 50%;
+    animation: sllist-spin 1s linear infinite;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+}
+
+/* Responsive Design for Store Search */
 @media (max-width: 768px) {
-    .sllist-table {
-        font-size: 14px;
+    .sllist-store-manager-page {
+        padding: 15px;
     }
     
-    .sllist-table th,
-    .sllist-table td {
-        padding: 8px;
+    .sllist-search-form {
+        padding: 20px;
     }
     
-    .sllist-form {
-        margin: 10px 0;
+    .sllist-checkbox-group {
+        flex-direction: column;
+        gap: 10px;
     }
     
-    .sllist-button {
+    .sllist-store-result {
+        flex-direction: column;
+        padding: 15px;
+    }
+    
+    .sllist-store-info {
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+    
+    .sllist-store-actions {
+        min-width: auto;
+    }
+    
+    .sllist-request-access-btn {
         width: 100%;
-        text-align: center;
-        margin-bottom: 10px;
+    }
+    
+    .sllist-pagination-wrapper {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .sllist-search-header h1 {
+        font-size: 24px;
+    }
+    
+    .sllist-search-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .sllist-store-name {
+        font-size: 16px;
     }
 }

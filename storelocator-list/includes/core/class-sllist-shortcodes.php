@@ -8,6 +8,8 @@
 
 namespace StoreLocatorList\Core;
 
+use StoreLocatorList\Core\SLList_Query_Helper;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
@@ -20,6 +22,9 @@ class SLList_Shortcodes {
      */
     public function __construct() {
         add_action('init', array($this, 'init_shortcodes'));
+        
+        // Also register immediately in case init has already passed
+        $this->init_shortcodes();
     }
     
     /**
@@ -46,43 +51,51 @@ class SLList_Shortcodes {
      */
     public function sllist_shortcode($atts = [], $content = null, $tag = "") {
         
-        // Normalize attribute keys, lowercase
-        $atts = array_change_key_case((array) $atts, CASE_LOWER);
+        try {
+            // Normalize attribute keys, lowercase
+            $atts = array_change_key_case((array) $atts, CASE_LOWER);
 
-        // Override default attributes with user attributes
-        $sllist_atts = shortcode_atts(
-            array(
-                'category_slug' => null,
-                'show_map' => false,
-                'state' => false,
-            ), $atts, $tag
-        );
+            // Override default attributes with user attributes
+            $sllist_atts = shortcode_atts(
+                array(
+                    'category_slug' => null,
+                    'show_map' => false,
+                    'state' => false,
+                ), $atts, $tag
+            );
 
-        // Add the table header
-        $content = $this->get_table_header();
+            // Add the table header
+            $content = $this->get_table_header();
 
-        // Get the store data
-        $query_args = $this->build_query_args($sllist_atts);
-        $store_loop = new \WP_Query($query_args);
+            // Get the store data
+            $query_args = $this->build_query_args($sllist_atts);
+            $store_loop = new \WP_Query($query_args);
 
-        if ($store_loop->have_posts()) {
-            // Add metadata to the post
-            $store_loop = SLList_Query_Helper::add_query_meta($store_loop);
+            if ($store_loop->have_posts()) {
+                // Add metadata to the post
+                $store_loop = SLList_Query_Helper::add_query_meta($store_loop);
 
-            while ($store_loop->have_posts()) {
-                // Using next_post like this pulls your posts out for easy access
-                $store = $store_loop->next_post();
-                $content .= $this->render_store_row($store, $sllist_atts);
+                while ($store_loop->have_posts()) {
+                    // Using next_post like this pulls your posts out for easy access
+                    $store = $store_loop->next_post();
+                    $content .= $this->render_store_row($store, $sllist_atts);
+                }
             }
-        }
 
-        // Complete the table
-        $content .= "</tbody></table></figure>";
-        
-        // Reset post data
-        wp_reset_postdata();
-        
-        return $content;
+            // Complete the table
+            $content .= "</tbody></table></figure>";
+            
+            // Reset post data
+            wp_reset_postdata();
+            
+            return $content;
+            
+        } catch (Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                return '<div class="sllist-error">Shortcode Error: ' . esc_html($e->getMessage()) . '</div>';
+            }
+            return '<div class="sllist-error">Unable to display store list. Please check your configuration.</div>';
+        }
     }
     
     /**

@@ -16,6 +16,12 @@ if (!defined('ABSPATH')) {
 class SLList_Query_Helper {
     
     /**
+     * Store search parameters for custom filters
+     * @var array
+     */
+    private static $search_params = array();
+    
+    /**
      * Add post metadata to a query object
      * 
      * Adapted from https://wordpress.stackexchange.com/questions/172041/can-wp-query-return-posts-meta-in-a-single-request
@@ -95,57 +101,110 @@ class SLList_Query_Helper {
         
         $query_args = array(
             'post_type' => 'wpsl_stores',
-            'post_status' => array('pending', 'publish'),
+            'post_status' => array('publish', 'pending'),
             'posts_per_page' => $params['posts_per_page'],
             'paged' => $params['paged'],
+            'orderby' => 'title',
+            'order' => 'ASC'
         );
         
         // If we have a search term, build meta query or title search
         if (!empty($params['search_term'])) {
-            $meta_query = array('relation' => 'OR');
-            $search_term = sanitize_text_field($params['search_term']);
+            $search_term = \sanitize_text_field($params['search_term']);
             
-            // Search in post title (store name)
-            if (in_array('name', $params['search_fields'])) {
+            // Check if we're searching in both title and meta fields
+            $has_title_search = in_array('name', $params['search_fields']);
+            $has_meta_search = (in_array('email', $params['search_fields']) || 
+                               in_array('address', $params['search_fields']) || 
+                               in_array('phone', $params['search_fields']));
+            
+            if ($has_title_search && $has_meta_search) {
+                // Mixed search: Use a custom query to handle title OR meta
+                // We'll use a custom WHERE clause for this
+                add_filter('posts_where', array(__CLASS__, 'custom_search_where'), 10, 2);
+                add_filter('posts_join', array(__CLASS__, 'custom_search_join'), 10, 2);
+                add_filter('posts_groupby', array(__CLASS__, 'custom_search_groupby'), 10, 2);
+                
+                // Store search parameters for the filter
+                self::$search_params = $params;
+                
+            } else if ($has_title_search) {
+                // Title-only search
                 $query_args['s'] = $search_term;
-            }
-            
-            // Search in meta fields
-            if (in_array('email', $params['search_fields'])) {
-                $meta_query[] = array(
-                    'key' => 'wpsl_email',
-                    'value' => $search_term,
-                    'compare' => 'LIKE'
-                );
-            }
-            
-            if (in_array('address', $params['search_fields'])) {
-                $meta_query[] = array(
-                    'key' => 'wpsl_address',
-                    'value' => $search_term,
-                    'compare' => 'LIKE'
-                );
-                $meta_query[] = array(
-                    'key' => 'wpsl_city',
-                    'value' => $search_term,
-                    'compare' => 'LIKE'
-                );
-            }
-            
-            if (in_array('phone', $params['search_fields'])) {
-                $meta_query[] = array(
-                    'key' => 'wpsl_phone',
-                    'value' => $search_term,
-                    'compare' => 'LIKE'
-                );
-            }
-            
-            if (count($meta_query) > 1) {
-                $query_args['meta_query'] = $meta_query;
+                
+            } else if ($has_meta_search) {
+                // Meta-only search
+                $meta_query = array('relation' => 'OR');
+                
+                // Search in meta fields
+                if (in_array('email', $params['search_fields'])) {
+                    $meta_query[] = array(
+                        'key' => 'wpsl_email',
+                        'value' => $search_term,
+                        'compare' => 'LIKE'
+                    );
+                }
+                
+                if (in_array('address', $params['search_fields'])) {
+                    $meta_query[] = array(
+                        'key' => 'wpsl_address',
+                        'value' => $search_term,
+                        'compare' => 'LIKE'
+                    );
+                    $meta_query[] = array(
+                        'key' => 'wpsl_address2',
+                        'value' => $search_term,
+                        'compare' => 'LIKE'
+                    );
+                    $meta_query[] = array(
+                        'key' => 'wpsl_city',
+                        'value' => $search_term,
+                        'compare' => 'LIKE'
+                    );
+                    $meta_query[] = array(
+                        'key' => 'wpsl_state',
+                        'value' => $search_term,
+                        'compare' => 'LIKE'
+                    );
+                    $meta_query[] = array(
+                        'key' => 'wpsl_zip',
+                        'value' => $search_term,
+                        'compare' => 'LIKE'
+                    );
+                }
+                
+                if (in_array('phone', $params['search_fields'])) {
+                    // Clean phone number for better matching
+                    $clean_search = preg_replace('/[^0-9]/', '', $search_term);
+                    $meta_query[] = array(
+                        'key' => 'wpsl_phone',
+                        'value' => $search_term,
+                        'compare' => 'LIKE'
+                    );
+                    if (strlen($clean_search) >= 3) {
+                        $meta_query[] = array(
+                            'key' => 'wpsl_phone',
+                            'value' => $clean_search,
+                            'compare' => 'LIKE'
+                        );
+                    }
+                }
+                
+                // Only add meta_query if we have meta search criteria
+                if (count($meta_query) > 1) {
+                    $query_args['meta_query'] = $meta_query;
+                }
             }
         }
         
         $query = new \WP_Query($query_args);
+        
+        // Clean up custom search filters if they were used
+        remove_filter('posts_where', array(__CLASS__, 'custom_search_where'), 10);
+        remove_filter('posts_join', array(__CLASS__, 'custom_search_join'), 10);
+        remove_filter('posts_groupby', array(__CLASS__, 'custom_search_groupby'), 10);
+        self::$search_params = array();
+        
         return self::add_query_meta($query);
     }
     
@@ -179,5 +238,88 @@ class SLList_Query_Helper {
         $post->meta = $meta;
         
         return $post;
+    }
+    
+    /**
+     * Custom WHERE clause for mixed title and meta searches
+     * 
+     * @param string $where WHERE clause
+     * @param \WP_Query $query Query object
+     * @return string Modified WHERE clause
+     */
+    public static function custom_search_where($where, $query) {
+        global $wpdb;
+        
+        if (empty(self::$search_params) || !isset(self::$search_params['search_term'])) {
+            return $where;
+        }
+        
+        $search_term = \esc_sql(\sanitize_text_field(self::$search_params['search_term']));
+        $search_fields = self::$search_params['search_fields'];
+        
+        $conditions = array();
+        
+        // Add title search condition
+        if (in_array('name', $search_fields)) {
+            $conditions[] = "({$wpdb->posts}.post_title LIKE '%{$search_term}%')";
+        }
+        
+        // Add meta search conditions
+        if (in_array('email', $search_fields)) {
+            $conditions[] = "(mt1.meta_key = 'wpsl_email' AND mt1.meta_value LIKE '%{$search_term}%')";
+        }
+        
+        if (in_array('address', $search_fields)) {
+            $conditions[] = "(mt1.meta_key IN ('wpsl_address', 'wpsl_address2', 'wpsl_city', 'wpsl_state', 'wpsl_zip') AND mt1.meta_value LIKE '%{$search_term}%')";
+        }
+        
+        if (in_array('phone', $search_fields)) {
+            $clean_search = preg_replace('/[^0-9]/', '', self::$search_params['search_term']);
+            $conditions[] = "(mt1.meta_key = 'wpsl_phone' AND (mt1.meta_value LIKE '%{$search_term}%' OR mt1.meta_value LIKE '%{$clean_search}%'))";
+        }
+        
+        if (!empty($conditions)) {
+            $where .= " AND (" . implode(' OR ', $conditions) . ")";
+        }
+        
+        return $where;
+    }
+    
+    /**
+     * Custom JOIN clause for mixed title and meta searches
+     * 
+     * @param string $join JOIN clause
+     * @param \WP_Query $query Query object
+     * @return string Modified JOIN clause
+     */
+    public static function custom_search_join($join, $query) {
+        global $wpdb;
+        
+        if (empty(self::$search_params)) {
+            return $join;
+        }
+        
+        $join .= " LEFT JOIN {$wpdb->postmeta} AS mt1 ON ({$wpdb->posts}.ID = mt1.post_id)";
+        
+        return $join;
+    }
+    
+    /**
+     * Custom GROUP BY clause for mixed title and meta searches
+     * 
+     * @param string $groupby GROUP BY clause
+     * @param \WP_Query $query Query object
+     * @return string Modified GROUP BY clause
+     */
+    public static function custom_search_groupby($groupby, $query) {
+        global $wpdb;
+        
+        if (empty(self::$search_params)) {
+            return $groupby;
+        }
+        
+        $groupby = "{$wpdb->posts}.ID";
+        
+        return $groupby;
     }
 }

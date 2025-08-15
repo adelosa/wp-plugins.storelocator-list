@@ -85,8 +85,8 @@ class SLList_Plugin {
         require_once $this->plugin_path . 'includes/core/class-sllist-query-helper.php';
         require_once $this->plugin_path . 'includes/core/class-sllist-security.php';
         
-        // Public classes (will be added in future phases)
-        // require_once $this->plugin_path . 'includes/public/class-sllist-store-search.php';
+        // Public classes
+        require_once $this->plugin_path . 'includes/public/class-sllist-store-search.php';
         // require_once $this->plugin_path . 'includes/public/class-sllist-store-update.php';
         
         // Admin classes (will be added in future phases)
@@ -102,6 +102,15 @@ class SLList_Plugin {
         
         // Initialize core components
         new Core\SLList_Shortcodes();
+        
+        // Initialize public components
+        new PublicPages\SLList_Store_Search();
+        
+        // Check if we need to flush rewrite rules
+        if (get_option('sllist_flush_rewrite_rules', false)) {
+            flush_rewrite_rules(true);
+            delete_option('sllist_flush_rewrite_rules');
+        }
     }
     
     /**
@@ -141,8 +150,14 @@ class SLList_Plugin {
             wp_schedule_event(time(), 'daily', 'sllist_cleanup_expired_tokens');
         }
         
-        // Flush rewrite rules to ensure our custom pages work
-        flush_rewrite_rules();
+        // Initialize store search to add rewrite rules
+        new PublicPages\SLList_Store_Search();
+        
+        // Force flush rewrite rules to ensure our custom pages work
+        flush_rewrite_rules(true);
+        
+        // Also set a flag to flush again on next init (just in case)
+        update_option('sllist_flush_rewrite_rules', true);
     }
     
     /**

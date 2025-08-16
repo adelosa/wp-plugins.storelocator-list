@@ -65,6 +65,8 @@ class SLList_Plugin {
      * Initialize WordPress hooks
      */
     private function init_hooks() {
+        // Note: query_vars and rewrite rules are now handled at the plugin level for early registration
+        
         add_action('init', array($this, 'init'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         
@@ -107,6 +109,8 @@ class SLList_Plugin {
     public function init() {
         // Load text domain for internationalization
         load_plugin_textdomain('storelocator-list', false, dirname(plugin_basename($this->plugin_path . 'storelocator-list.php')) . '/languages');
+        
+        // Note: Rewrite rules are now handled at the plugin level for early registration
         
         // Initialize core components
         new Core\SLList_Shortcodes();
@@ -159,8 +163,9 @@ class SLList_Plugin {
             wp_schedule_event(time(), 'daily', 'sllist_cleanup_expired_tokens');
         }
         
-        // Initialize store search to add rewrite rules
-        new PublicPages\SLList_Store_Search();
+        // Ensure rewrite rules are added (they're now handled at plugin level)
+        // Call the functions directly to ensure they're registered
+        sllist_add_rewrite_rules();
         
         // Force flush rewrite rules to ensure our custom pages work
         flush_rewrite_rules(true);

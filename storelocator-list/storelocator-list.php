@@ -29,6 +29,43 @@ define('SLLIST_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('SLLIST_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 /**
+ * Register query variables early - this must happen before WordPress processes rewrite rules
+ */
+function sllist_add_query_vars($vars) {
+    if (!is_array($vars)) {
+        $vars = array();
+    }
+    
+    // Add our custom query variable
+    if (!in_array('sllist_page', $vars)) {
+        $vars[] = 'sllist_page';
+    }
+    
+    return $vars;
+}
+add_filter('query_vars', 'sllist_add_query_vars', 1); // Very high priority
+
+/**
+ * Add rewrite rules early
+ */
+function sllist_add_rewrite_rules() {
+    // Add rewrite rule for store manager page
+    add_rewrite_rule(
+        '^store-manager/?$',
+        'index.php?sllist_page=store_manager',
+        'top'
+    );
+    
+    // Add rewrite rule for store update page
+    add_rewrite_rule(
+        '^update-store/?$',
+        'index.php?sllist_page=store_update',
+        'top'
+    );
+}
+add_action('init', 'sllist_add_rewrite_rules', 1); // Very early in init
+
+/**
  * Load the main plugin class
  */
 require_once SLLIST_PLUGIN_PATH . 'includes/class-sllist-plugin.php';

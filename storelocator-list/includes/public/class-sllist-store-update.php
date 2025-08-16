@@ -21,8 +21,7 @@ class SLList_Store_Update {
      * Constructor
      */
     public function __construct() {
-        // Add query vars early - before init
-        add_filter('query_vars', array($this, 'add_query_vars'), 10, 1);
+        // Note: query_vars filter is now handled by the main plugin class
         
         add_action('init', array($this, 'init_store_update'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
@@ -32,8 +31,11 @@ class SLList_Store_Update {
         add_action('wp_ajax_nopriv_sllist_update_store_details', array($this, 'ajax_update_store_details'));
         
         // Handle page requests with multiple approaches
+        add_action('parse_request', array($this, 'parse_request'), 1);
         add_action('template_redirect', array($this, 'handle_store_update_page'), 5);
         add_filter('template_include', array($this, 'template_include'), 99);
+        add_filter('wp_title', array($this, 'wp_title'), 10, 2);
+        add_filter('document_title_parts', array($this, 'document_title_parts'));
     }
     
     /**
@@ -63,26 +65,56 @@ class SLList_Store_Update {
      * Initialize store update functionality
      */
     public function init_store_update() {
-        // Add rewrite rules for our custom pages
-        add_rewrite_rule(
-            '^update-store/?$',
-            'index.php?sllist_page=store_update',
-            'top'
-        );
+        // Rewrite rules are now handled by the main plugin class
+        // This method is kept for future initialization needs
     }
     
     /**
-     * Add query variables
+     * Parse request to handle our custom pages properly
      * 
-     * @param array $vars Query variables
-     * @return array Modified query variables
+     * @param WP $wp WordPress object
      */
-    public function add_query_vars($vars) {
-        if (!is_array($vars)) {
-            $vars = array();
+    public function parse_request($wp) {
+        // Check if this is our store update page
+        if (isset($wp->query_vars['sllist_page']) && $wp->query_vars['sllist_page'] === 'store_update') {
+            // Tell WordPress this is a valid page, not a 404
+            status_header(200);
+            $wp->is_404 = false;
+            global $wp_query;
+            $wp_query->is_404 = false;
+            $wp_query->is_page = true;
+            $wp_query->is_singular = true;
         }
-        $vars[] = 'sllist_page';
-        return $vars;
+    }
+    
+    /**
+     * Filter the page title for our custom pages
+     * 
+     * @param string $title The page title
+     * @param string $sep The title separator
+     * @return string Modified title
+     */
+    public function wp_title($title, $sep = '') {
+        if (get_query_var('sllist_page') === 'store_update') {
+            return 'Update Store Details ' . $sep . ' ' . get_bloginfo('name');
+        }
+        return $title;
+    }
+    
+    /**
+     * Filter the document title parts for our custom pages
+     * 
+     * @param array $title Title parts
+     * @return array Modified title parts
+     */
+    public function document_title_parts($title) {
+        if (get_query_var('sllist_page') === 'store_update') {
+            $title['title'] = 'Update Store Details';
+            $title['page'] = '';
+            $title['tagline'] = get_bloginfo('description');
+            $title['site'] = get_bloginfo('name');
+        }
+        return $title;
     }
     
     /**

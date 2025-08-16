@@ -109,7 +109,12 @@ class SLList_Store_Update {
      */
     public function document_title_parts($title) {
         if (get_query_var('sllist_page') === 'store_update') {
-            $title['title'] = 'Update Store Details';
+            // Check if this is the success page
+            if (isset($_GET['success']) && $_GET['success'] === '1') {
+                $title['title'] = 'Update Successful';
+            } else {
+                $title['title'] = 'Update Store Details';
+            }
             $title['page'] = '';
             $title['tagline'] = get_bloginfo('description');
             $title['site'] = get_bloginfo('name');
@@ -140,8 +145,13 @@ class SLList_Store_Update {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('SLList Debug: Displaying store update page');
             }
-            
-            $this->display_store_update_page();
+
+            // Check if this is a success page request
+            if (isset($_GET['success']) && $_GET['success'] === '1') {
+                $this->display_success_page();
+            } else {
+                $this->display_store_update_page();
+            }
             exit;
         }
     }
@@ -226,6 +236,77 @@ class SLList_Store_Update {
         echo '</div>'; // .container
         echo '</div>'; // .sllist-store-update-page
         
+        if ($theme_has_footer) {
+            get_footer();
+        } else {
+            wp_footer();
+            echo '</body>';
+            echo '</html>';
+        }
+    }
+
+    /**
+     * Display the success page after store update
+     */
+    public function display_success_page() {
+        // Get store name from URL parameter
+        $store_name = isset($_GET['store_name']) ? sanitize_text_field(urldecode($_GET['store_name'])) : __('Your Store', 'storelocator-list');
+
+        // Check if we have a proper theme with header/footer
+        $theme_has_header = locate_template('header.php');
+        $theme_has_footer = locate_template('footer.php');
+
+        if ($theme_has_header) {
+            get_header();
+        } else {
+            // Minimal HTML header for themes without header.php
+            echo '<!DOCTYPE html>';
+            echo '<html ' . get_language_attributes() . '>';
+            echo '<head>';
+            echo '<meta charset="' . get_bloginfo('charset') . '">';
+            echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
+            echo '<title>Update Successful - ' . get_bloginfo('name') . '</title>';
+            wp_head();
+            echo '</head>';
+            echo '<body class="store-update-success-page">';
+        }
+
+        echo '<div class="sllist-store-update-success">';
+        echo '<div class="container">';
+
+        // Success content
+        echo '<div class="success-content" style="text-align: center; max-width: 600px; margin: 50px auto; padding: 40px 20px;">';
+        
+        // Success icon
+        echo '<div class="success-icon" style="font-size: 60px; color: #28a745; margin-bottom: 20px;">✓</div>';
+        
+        // Main heading
+        echo '<h1 style="color: #28a745; margin-bottom: 20px;">' . __('Update Successful!', 'storelocator-list') . '</h1>';
+        
+        // Store name
+        echo '<h2 style="margin-bottom: 30px; color: #333;">' . esc_html($store_name) . '</h2>';
+        
+        // Success message
+        echo '<div class="success-message" style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 30px; margin-bottom: 30px; color: #155724;">';
+        echo '<p style="font-size: 18px; margin-bottom: 15px;"><strong>' . __('Your store listing has been updated successfully!', 'storelocator-list') . '</strong></p>';
+        echo '<p>' . __('Your changes have been saved and are now live on the website. You will also receive a confirmation email shortly.', 'storelocator-list') . '</p>';
+        echo '</div>';
+
+        // Security notice
+        echo '<div class="security-notice" style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 30px; color: #856404;">';
+        echo '<p><strong>' . __('Security Notice:', 'storelocator-list') . '</strong> ' . __('For security purposes, your access token has been automatically deactivated. If you need to make additional changes in the future, please request new access from the store manager page.', 'storelocator-list') . '</p>';
+        echo '</div>';
+
+        // Action buttons
+        echo '<div class="action-buttons" style="margin-top: 40px;">';
+        echo '<a href="' . home_url() . '" class="button button-primary button-large" style="background: #0073aa; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; margin-right: 15px;">' . __('Return to Homepage', 'storelocator-list') . '</a>';
+        echo '<a href="' . home_url('/store-manager/') . '" class="button button-secondary button-large" style="background: #6c757d; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px;">' . __('Request New Access', 'storelocator-list') . '</a>';
+        echo '</div>';
+
+        echo '</div>'; // .success-content
+        echo '</div>'; // .container
+        echo '</div>'; // .sllist-store-update-success
+
         if ($theme_has_footer) {
             get_footer();
         } else {
@@ -638,10 +719,17 @@ class SLList_Store_Update {
         
         // Send confirmation email
         $this->send_update_confirmation_email($token_info['store'], $store_data);
-        
+
+        // Create success page URL
+        $success_url = add_query_arg(array(
+            'success' => '1',
+            'store_name' => urlencode($store_data['store_name'])
+        ), home_url('/update-store/'));
+
         wp_die(json_encode(array(
             'success' => true,
-            'data' => __('Store details updated successfully! Your changes have been saved.', 'storelocator-list')
+            'data' => __('Store details updated successfully! Your changes have been saved.', 'storelocator-list'),
+            'redirect_url' => $success_url
         )));
     }
     

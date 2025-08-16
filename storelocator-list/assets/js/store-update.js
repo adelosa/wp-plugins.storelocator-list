@@ -93,21 +93,22 @@
             var $form = $(this);
             var $submitBtn = $form.find('button[type="submit"]');
             var originalText = $submitBtn.text();
-            
+            var isRedirecting = false;
+
             // Validate form before submitting
             if (!StoreUpdate.validateForm($form)) {
                 return;
             }
-            
+
             // Disable form and show loading
             $form.addClass('sllist-loading');
             $submitBtn.prop('disabled', true).text(sllist_update.strings.updating);
-            
+
             // Clear any existing errors
             $('.sllist-error').remove();
-            
+
             var formData = $form.serialize() + '&action=sllist_update_store_details';
-            
+
             $.ajax({
                 url: sllist_update.ajax_url,
                 type: 'POST',
@@ -115,9 +116,22 @@
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        StoreUpdate.showSuccess($form, response.data);
-                        // Disable form after successful update
-                        $form.find('input, textarea, button').prop('disabled', true);
+                        // Check if there's a redirect URL
+                        if (response.redirect_url) {
+                            isRedirecting = true;
+                            // Show brief success message then redirect
+                            StoreUpdate.showSuccess($form, response.data + ' Redirecting...');
+                            
+                            // Redirect after a short delay
+                            setTimeout(function() {
+                                window.location.href = response.redirect_url;
+                            }, 1500);
+                        } else {
+                            // Fallback to original behavior
+                            StoreUpdate.showSuccess($form, response.data);
+                            // Disable form after successful update
+                            $form.find('input, textarea, button').prop('disabled', true);
+                        }
                     } else {
                         StoreUpdate.showError($form, response.data);
                     }
@@ -127,8 +141,9 @@
                 },
                 complete: function() {
                     $form.removeClass('sllist-loading');
-                    if (!$submitBtn.prop('disabled')) {
-                        $submitBtn.text(originalText);
+                    // Only re-enable the button if we're not redirecting
+                    if (!isRedirecting) {
+                        $submitBtn.prop('disabled', false).text(originalText);
                     }
                 }
             });

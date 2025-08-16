@@ -29,6 +29,8 @@ class SLList_Store_Search {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('wp_ajax_sllist_search_stores', array($this, 'ajax_search_stores'));
         add_action('wp_ajax_nopriv_sllist_search_stores', array($this, 'ajax_search_stores'));
+        add_action('wp_ajax_sllist_request_store_access', array($this, 'ajax_request_store_access'));
+        add_action('wp_ajax_nopriv_sllist_request_store_access', array($this, 'ajax_request_store_access'));
         
         // Handle page requests early
         add_action('template_redirect', array($this, 'handle_store_manager_page'), 5);
@@ -308,6 +310,221 @@ class SLList_Store_Search {
                 'total' => $results->found_posts
             )
         )));
+    }
+    
+    /**
+     * Handle AJAX store access request
+     */
+    public function ajax_request_store_access() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'sllist_store_search')) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Security check failed. Please refresh the page and try again.', 'storelocator-list')
+            )));
+        }
+        
+        // Rate limiting check - more restrictive for access requests
+        if (SLList_Security::is_rate_limited('access_request')) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Too many access requests. Please try again later.', 'storelocator-list')
+            )));
+        }
+        
+        // Record the attempt
+        SLList_Security::record_rate_limit_attempt('access_request');
+        
+        // Get and validate store ID
+        $store_id = intval($_POST['store_id'] ?? 0);
+        
+        if ($store_id <= 0) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Invalid store ID.', 'storelocator-list')
+            )));
+        }
+        
+        // Verify store exists and get store data
+        $store = get_post($store_id);
+        if (!$store || $store->post_type !== 'wpsl_stores') {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Store not found.', 'storelocator-list')
+            )));
+        }
+        
+        // Get store email address
+        $store_email = get_post_meta($store_id, 'wpsl_email', true);
+        if (empty($store_email) || !is_email($store_email)) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Store email address not found or invalid. Please contact the administrator.', 'storelocator-list')
+            )));
+        }
+        
+        // Check if store already has active access
+        $existing_token = get_post_meta($store_id, 'sllist_access_token', true);
+        $token_expires = get_post_meta($store_id, 'sllist_token_expires', true);
+        $token_used = get_post_meta($store_id, 'sllist_token_used', true);
+        
+        if (!empty($existing_token) && !$token_used && $token_expires && time() < $token_expires) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('An active access request already exists for this store. Please check your email or wait for it to expire.', 'storelocator-list')
+            )));
+        }
+        
+        // Generate access credentials
+        $credentials = SLList_Security::create_store_access_credentials($store_id);
+        
+        if (!$credentials) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Failed to generate access credentials. Please try again.', 'storelocator-list')
+            )));
+        }
+        
+        // Send email with access credentials
+        $email_sent = $this->send_access_email($store, $credentials);
+        
+        if (!$email_sent) {
+            // Clean up credentials if email failed
+            SLList_Security::revoke_store_access($store_id);
+            
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Failed to send access email. Please try again or contact the administrator.', 'storelocator-list')
+            )));
+        }
+        
+        // Success response
+        wp_die(json_encode(array(
+            'success' => true,
+            'data' => sprintf(
+                __('Access credentials have been sent to %s. Please check your email for instructions.', 'storelocator-list'),
+                esc_html($store_email)
+            )
+        )));
+    }
+    
+    /**
+     * Send access email to store owner
+     * 
+     * @param \WP_Post $store Store post object
+     * @param array $credentials Access credentials array
+     * @return bool True if email sent successfully
+     */
+    private function send_access_email($store, $credentials) {
+        $store_email = get_post_meta($store->ID, 'wpsl_email', true);
+        $store_name = $store->post_title;
+        
+        // Build the access URL
+        $access_url = home_url('/update-store/?token=' . urlencode($credentials['token']));
+        
+        // Email subject
+        $subject = sprintf(
+            __('Store Update Access - %s', 'storelocator-list'),
+            $store_name
+        );
+        
+        // Email content
+        $message = $this->get_access_email_template($store, $credentials, $access_url);
+        
+        // Email headers
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+        );
+        
+        // Send email
+        return wp_mail($store_email, $subject, $message, $headers);
+    }
+    
+    /**
+     * Get access email template
+     * 
+     * @param \WP_Post $store Store post object
+     * @param array $credentials Access credentials
+     * @param string $access_url Access URL
+     * @return string Email HTML content
+     */
+    private function get_access_email_template($store, $credentials, $access_url) {
+        $store_name = esc_html($store->post_title);
+        $password = esc_html($credentials['password']);
+        $expires_date = date('F j, Y \a\t g:i A', $credentials['expires']);
+        $site_name = get_bloginfo('name');
+        
+        $template = '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>' . esc_html($subject ?? '') . '</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #f8f9fa; padding: 20px; text-align: center; border-radius: 5px; }
+                .content { padding: 20px 0; }
+                .credentials { background: #e9ecef; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                .button { display: inline-block; background: #007cba; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                .footer { font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; }
+                .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 3px; margin: 15px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Store Update Access Request</h1>
+                    <p>Access granted for: <strong>' . $store_name . '</strong></p>
+                </div>
+                
+                <div class="content">
+                    <p>Hello,</p>
+                    
+                    <p>You have requested access to update your store details on ' . esc_html($site_name) . '. Please use the following credentials to access your store update page:</p>
+                    
+                    <div class="credentials">
+                        <h3>Your Access Credentials:</h3>
+                        <p><strong>Password:</strong> ' . $password . '</p>
+                        <p><strong>Expires:</strong> ' . $expires_date . '</p>
+                    </div>
+                    
+                    <div class="warning">
+                        <strong>Important:</strong> This access is temporary and will expire on ' . $expires_date . '. After using these credentials once, they will be deactivated for security.
+                    </div>
+                    
+                    <p style="text-align: center;">
+                        <a href="' . esc_url($access_url) . '" class="button">Update Your Store Details</a>
+                    </p>
+                    
+                    <p>If the button above doesn\'t work, copy and paste this URL into your browser:</p>
+                    <p style="word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 3px;">
+                        ' . esc_url($access_url) . '
+                    </p>
+                    
+                    <h3>What you can update:</h3>
+                    <ul>
+                        <li>Store name and description</li>
+                        <li>Address and contact information</li>
+                        <li>Phone number and email</li>
+                        <li>Business hours</li>
+                    </ul>
+                    
+                    <div class="warning">
+                        <strong>Security Notice:</strong> If you did not request this access, please ignore this email. The access will expire automatically.
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>This email was sent from ' . esc_html($site_name) . ' (' . esc_url(home_url()) . ').</p>
+                    <p>For support, please contact: ' . esc_html(get_option('admin_email')) . '</p>
+                </div>
+            </div>
+        </body>
+        </html>';
+        
+        return $template;
     }
     
     /**

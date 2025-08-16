@@ -32,8 +32,9 @@ class SLList_Store_Search {
         add_action('wp_ajax_sllist_request_store_access', array($this, 'ajax_request_store_access'));
         add_action('wp_ajax_nopriv_sllist_request_store_access', array($this, 'ajax_request_store_access'));
         
-        // Handle page requests early
+        // Handle page requests with multiple approaches
         add_action('template_redirect', array($this, 'handle_store_manager_page'), 5);
+        add_filter('template_include', array($this, 'template_include'), 99);
     }
     
     /**
@@ -106,6 +107,33 @@ class SLList_Store_Search {
     }
     
     /**
+     * Handle template inclusion - alternative method to template_redirect
+     * 
+     * @param string $template The template path
+     * @return string The template path or custom template
+     */
+    public function template_include($template) {
+        // Get query var
+        $page = get_query_var('sllist_page');
+        
+        // Also check direct URL parsing as fallback
+        if (empty($page)) {
+            $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+            if (preg_match('#/store-manager/?$#', $request_uri)) {
+                $page = 'store_manager';
+            }
+        }
+        
+        if ($page === 'store_manager') {
+            // Return a custom template path that triggers our display
+            $this->display_store_manager_page();
+            exit;
+        }
+        
+        return $template;
+    }
+    
+    /**
      * Display the store manager search page
      */
     public function display_store_manager_page() {
@@ -114,6 +142,9 @@ class SLList_Store_Search {
             $this->display_rate_limited_page();
             return;
         }
+        
+        // Manually enqueue scripts since we're bypassing normal WordPress flow
+        $this->enqueue_scripts();
         
         // Check if we have a proper theme with header/footer
         $theme_has_header = locate_template('header.php');
@@ -420,7 +451,7 @@ class SLList_Store_Search {
         $store_name = $store->post_title;
         
         // Build the access URL
-        $access_url = home_url('/update-store/?token=' . urlencode($credentials['token']));
+        $access_url = \StoreLocatorList\PublicPages\SLList_Store_Update::get_store_update_url($credentials['token']);
         
         // Email subject
         $subject = sprintf(
@@ -715,7 +746,8 @@ class SLList_Store_Search {
         $is_store_manager = false;
         
         if (get_query_var('sllist_page') === 'store_manager' || 
-            (isset($_GET['sllist_page']) && $_GET['sllist_page'] === 'store_manager')) {
+            (isset($_GET['sllist_page']) && $_GET['sllist_page'] === 'store_manager') ||
+            preg_match('#/store-manager/?$#', $_SERVER['REQUEST_URI'] ?? '')) {
             $is_store_manager = true;
         }
         
@@ -723,6 +755,11 @@ class SLList_Store_Search {
         if ($is_store_manager) {
             // Get plugin instance to access URLs
             $plugin = \StoreLocatorList\SLList_Plugin::get_instance();
+            
+            // Enqueue jQuery if not already loaded
+            if (!wp_script_is('jquery', 'enqueued')) {
+                wp_enqueue_script('jquery');
+            }
             
             wp_enqueue_script(
                 'sllist-store-search',

@@ -1,0 +1,827 @@
+<?php
+/**
+ * Store Update functionality for public users
+ * 
+ * @package StoreLocator-List
+ * @since 0.2.0
+ */
+
+namespace StoreLocatorList\PublicPages;
+
+use StoreLocatorList\Core\SLList_Security;
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class SLList_Store_Update {
+    
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        // Add query vars early - before init
+        add_filter('query_vars', array($this, 'add_query_vars'), 10, 1);
+        
+        add_action('init', array($this, 'init_store_update'));
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
+        add_action('wp_ajax_sllist_authenticate_store_access', array($this, 'ajax_authenticate_store_access'));
+        add_action('wp_ajax_nopriv_sllist_authenticate_store_access', array($this, 'ajax_authenticate_store_access'));
+        add_action('wp_ajax_sllist_update_store_details', array($this, 'ajax_update_store_details'));
+        add_action('wp_ajax_nopriv_sllist_update_store_details', array($this, 'ajax_update_store_details'));
+        
+        // Handle page requests with multiple approaches
+        add_action('template_redirect', array($this, 'handle_store_update_page'), 5);
+        add_filter('template_include', array($this, 'template_include'), 99);
+    }
+    
+    /**
+     * Get the store update page URL
+     * 
+     * @param string $token Access token
+     * @param bool $use_pretty_url Whether to use pretty URL or query parameter
+     * @return string The store update page URL
+     */
+    public static function get_store_update_url($token = '', $use_pretty_url = true) {
+        if ($use_pretty_url) {
+            $url = home_url('/update-store/');
+            if (!empty($token)) {
+                $url .= '?token=' . urlencode($token);
+            }
+            return $url;
+        } else {
+            $url = home_url('/?sllist_page=store_update');
+            if (!empty($token)) {
+                $url .= '&token=' . urlencode($token);
+            }
+            return $url;
+        }
+    }
+    
+    /**
+     * Initialize store update functionality
+     */
+    public function init_store_update() {
+        // Add rewrite rules for our custom pages
+        add_rewrite_rule(
+            '^update-store/?$',
+            'index.php?sllist_page=store_update',
+            'top'
+        );
+    }
+    
+    /**
+     * Add query variables
+     * 
+     * @param array $vars Query variables
+     * @return array Modified query variables
+     */
+    public function add_query_vars($vars) {
+        if (!is_array($vars)) {
+            $vars = array();
+        }
+        $vars[] = 'sllist_page';
+        return $vars;
+    }
+    
+    /**
+     * Handle store update page requests
+     */
+    public function handle_store_update_page() {
+        // Get query var - try both methods for compatibility
+        $page = get_query_var('sllist_page');
+        
+        // Fallback: check $_GET directly if query_var isn't working
+        if (empty($page) && isset($_GET['sllist_page'])) {
+            $page = sanitize_text_field($_GET['sllist_page']);
+        }
+        
+        // Debug logging (remove in production)
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('SLList Debug: template_redirect fired, sllist_page = ' . var_export($page, true));
+            error_log('SLList Debug: $_GET = ' . print_r($_GET, true));
+        }
+        
+        if ($page === 'store_update') {
+            // Debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('SLList Debug: Displaying store update page');
+            }
+            
+            $this->display_store_update_page();
+            exit;
+        }
+    }
+    
+    /**
+     * Handle template inclusion - alternative method to template_redirect
+     * 
+     * @param string $template The template path
+     * @return string The template path or custom template
+     */
+    public function template_include($template) {
+        // Get query var
+        $page = get_query_var('sllist_page');
+        
+        // Also check direct URL parsing as fallback
+        if (empty($page)) {
+            $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+            if (preg_match('#/update-store/?(\?.*)?$#', $request_uri)) {
+                $page = 'store_update';
+            }
+        }
+        
+        if ($page === 'store_update') {
+            // Return a custom template path that triggers our display
+            $this->display_store_update_page();
+            exit;
+        }
+        
+        return $template;
+    }
+    
+    /**
+     * Display the store update page
+     */
+    public function display_store_update_page() {
+        // Get token from URL parameter
+        $token = isset($_GET['token']) ? sanitize_text_field($_GET['token']) : '';
+        
+        // Manually enqueue scripts since we're bypassing normal WordPress flow
+        $this->enqueue_scripts();
+        
+        // Check if we have a proper theme with header/footer
+        $theme_has_header = locate_template('header.php');
+        $theme_has_footer = locate_template('footer.php');
+        
+        if ($theme_has_header) {
+            get_header();
+        } else {
+            // Minimal HTML header for themes without header.php
+            echo '<!DOCTYPE html>';
+            echo '<html ' . get_language_attributes() . '>';
+            echo '<head>';
+            echo '<meta charset="' . get_bloginfo('charset') . '">';
+            echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
+            echo '<title>Update Store Details - ' . get_bloginfo('name') . '</title>';
+            wp_head();
+            echo '</head>';
+            echo '<body class="store-update-page">';
+        }
+        
+        echo '<div class="sllist-store-update-page">';
+        echo '<div class="container">';
+        
+        // Show access URLs for convenience (only for admins)
+        if (current_user_can('manage_options')) {
+            echo '<div class="sllist-admin-notice" style="background: #f0f0f1; border: 1px solid #c3c4c7; padding: 10px; margin-bottom: 20px; border-radius: 4px;">';
+            echo '<p><strong>Admin Notice:</strong> This store update page can be accessed via:</p>';
+            echo '<ul>';
+            echo '<li><strong>Pretty URL:</strong> <code>' . home_url('/update-store/') . '</code></li>';
+            echo '<li><strong>Alternative URL:</strong> <code>' . home_url('/?sllist_page=store_update') . '</code></li>';
+            echo '</ul>';
+            echo '<p><em>If the pretty URL doesn\'t work, go to Settings → Permalinks and click "Save Changes" to flush rewrite rules.</em></p>';
+            echo '</div>';
+        }
+        
+        if (empty($token)) {
+            $this->display_no_token_page();
+        } else {
+            $this->display_authentication_page($token);
+        }
+        
+        echo '</div>'; // .container
+        echo '</div>'; // .sllist-store-update-page
+        
+        if ($theme_has_footer) {
+            get_footer();
+        } else {
+            wp_footer();
+            echo '</body>';
+            echo '</html>';
+        }
+    }
+    
+    /**
+     * Display page when no token is provided
+     */
+    private function display_no_token_page() {
+        echo '<div class="sllist-update-error">';
+        echo '<h1>' . __('Invalid Access', 'storelocator-list') . '</h1>';
+        echo '<p>' . __('This page requires a valid access token. Please use the link provided in your email.', 'storelocator-list') . '</p>';
+        echo '<p><a href="' . home_url('/store-manager/') . '" class="button">' . __('Request Store Access', 'storelocator-list') . '</a></p>';
+        echo '</div>';
+    }
+    
+    /**
+     * Display authentication page with password form
+     * 
+     * @param string $token Access token
+     */
+    private function display_authentication_page($token) {
+        // Get basic token info without validating password
+        $token_info = $this->get_token_info($token);
+        
+        if (!$token_info) {
+            echo '<div class="sllist-update-error">';
+            echo '<h1>' . __('Invalid or Expired Token', 'storelocator-list') . '</h1>';
+            echo '<p>' . __('The access token is invalid, expired, or has already been used.', 'storelocator-list') . '</p>';
+            echo '<p><a href="' . home_url('/store-manager/') . '" class="button">' . __('Request New Access', 'storelocator-list') . '</a></p>';
+            echo '</div>';
+            return;
+        }
+        
+        $store = $token_info['store'];
+        
+        echo '<div class="sllist-authentication-form">';
+        echo '<h1>' . __('Store Update Access', 'storelocator-list') . '</h1>';
+        echo '<div class="store-info">';
+        echo '<h2>' . sprintf(__('Updating: %s', 'storelocator-list'), esc_html($store->post_title)) . '</h2>';
+        
+        // Show store basic info
+        $store_address = get_post_meta($store->ID, 'wpsl_address', true);
+        $store_city = get_post_meta($store->ID, 'wpsl_city', true);
+        $store_state = get_post_meta($store->ID, 'wpsl_state', true);
+        
+        if ($store_address || $store_city || $store_state) {
+            echo '<p class="store-location">';
+            if ($store_address) echo esc_html($store_address);
+            if ($store_city || $store_state) {
+                if ($store_address) echo ', ';
+                echo esc_html(trim($store_city . ' ' . $store_state));
+            }
+            echo '</p>';
+        }
+        
+        echo '</div>'; // .store-info
+        
+        // Show security warnings if there are failed attempts
+        if ($token_info['attempts'] > 0) {
+            echo '<div class="sllist-security-warning">';
+            echo '<p><strong>' . __('Security Notice:', 'storelocator-list') . '</strong> ';
+            echo sprintf(
+                _n('%d failed authentication attempt detected.', '%d failed authentication attempts detected.', $token_info['attempts'], 'storelocator-list'),
+                $token_info['attempts']
+            );
+            echo '</p>';
+            echo '</div>';
+        }
+        
+        // Authentication form
+        echo '<form id="sllist-auth-form" method="post">';
+        wp_nonce_field('sllist_auth_nonce', 'sllist_auth_nonce');
+        
+        echo '<input type="hidden" name="token" value="' . esc_attr($token) . '">';
+        
+        echo '<div class="form-group">';
+        echo '<label for="access_password">' . __('Access Password', 'storelocator-list') . '</label>';
+        echo '<input type="password" id="access_password" name="access_password" required maxlength="50" autocomplete="current-password">';
+        echo '<p class="help-text">' . __('Enter the password sent to your email address.', 'storelocator-list') . '</p>';
+        echo '</div>';
+        
+        echo '<div class="form-group">';
+        echo '<button type="submit" class="button button-primary">' . __('Access Store Update', 'storelocator-list') . '</button>';
+        echo '</div>';
+        
+        echo '</form>';
+        
+        // Show expiration info
+        if ($token_info['expires']) {
+            $expires_date = date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $token_info['expires']);
+            echo '<p class="expiry-info"><small>' . sprintf(__('Access expires: %s', 'storelocator-list'), $expires_date) . '</small></p>';
+        }
+        
+        echo '</div>'; // .sllist-authentication-form
+    }
+    
+    /**
+     * Display the store update form after successful authentication
+     * 
+     * @param array $store_data Validated store data
+     */
+    private function display_store_update_form($store_data) {
+        $store = $store_data['store'];
+        $token = $store_data['token'];
+        
+        echo '<div class="sllist-store-update-form">';
+        echo '<h1>' . __('Update Store Details', 'storelocator-list') . '</h1>';
+        echo '<h2>' . esc_html($store->post_title) . '</h2>';
+        
+        echo '<form id="sllist-update-form" method="post">';
+        wp_nonce_field('sllist_update_nonce', 'sllist_update_nonce');
+        
+        echo '<input type="hidden" name="token" value="' . esc_attr($token) . '">';
+        echo '<input type="hidden" name="store_id" value="' . esc_attr($store->ID) . '">';
+        
+        // Store Name
+        echo '<div class="form-group">';
+        echo '<label for="store_name">' . __('Store Name', 'storelocator-list') . ' <span class="required">*</span></label>';
+        echo '<input type="text" id="store_name" name="store_name" value="' . esc_attr($store->post_title) . '" required maxlength="200">';
+        echo '</div>';
+        
+        // Store Description
+        echo '<div class="form-group">';
+        echo '<label for="store_description">' . __('Store Description', 'storelocator-list') . '</label>';
+        echo '<textarea id="store_description" name="store_description" rows="4" maxlength="1000">' . esc_textarea($store->post_content) . '</textarea>';
+        echo '</div>';
+        
+        // Address fields
+        echo '<fieldset>';
+        echo '<legend>' . __('Address Information', 'storelocator-list') . '</legend>';
+        
+        echo '<div class="form-group">';
+        echo '<label for="wpsl_address">' . __('Street Address', 'storelocator-list') . '</label>';
+        echo '<input type="text" id="wpsl_address" name="wpsl_address" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_address', true)) . '" maxlength="200">';
+        echo '</div>';
+        
+        echo '<div class="form-group">';
+        echo '<label for="wpsl_address2">' . __('Address Line 2', 'storelocator-list') . '</label>';
+        echo '<input type="text" id="wpsl_address2" name="wpsl_address2" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_address2', true)) . '" maxlength="200">';
+        echo '</div>';
+        
+        echo '<div class="form-row">';
+        echo '<div class="form-group form-group-half">';
+        echo '<label for="wpsl_city">' . __('City', 'storelocator-list') . '</label>';
+        echo '<input type="text" id="wpsl_city" name="wpsl_city" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_city', true)) . '" maxlength="100">';
+        echo '</div>';
+        
+        echo '<div class="form-group form-group-half">';
+        echo '<label for="wpsl_state">' . __('State/Province', 'storelocator-list') . '</label>';
+        echo '<input type="text" id="wpsl_state" name="wpsl_state" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_state', true)) . '" maxlength="100">';
+        echo '</div>';
+        echo '</div>';
+        
+        echo '<div class="form-group">';
+        echo '<label for="wpsl_zip">' . __('ZIP/Postal Code', 'storelocator-list') . '</label>';
+        echo '<input type="text" id="wpsl_zip" name="wpsl_zip" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_zip', true)) . '" maxlength="20">';
+        echo '</div>';
+        
+        echo '</fieldset>';
+        
+        // Contact Information
+        echo '<fieldset>';
+        echo '<legend>' . __('Contact Information', 'storelocator-list') . '</legend>';
+        
+        echo '<div class="form-group">';
+        echo '<label for="wpsl_phone">' . __('Phone Number', 'storelocator-list') . '</label>';
+        echo '<input type="tel" id="wpsl_phone" name="wpsl_phone" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_phone', true)) . '" maxlength="50">';
+        echo '</div>';
+        
+        echo '<div class="form-group">';
+        echo '<label for="wpsl_email">' . __('Email Address', 'storelocator-list') . '</label>';
+        echo '<input type="email" id="wpsl_email" name="wpsl_email" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_email', true)) . '" maxlength="100">';
+        echo '<p class="help-text">' . __('This email will be used for future access requests.', 'storelocator-list') . '</p>';
+        echo '</div>';
+        
+        echo '<div class="form-group">';
+        echo '<label for="wpsl_url">' . __('Website URL', 'storelocator-list') . '</label>';
+        echo '<input type="url" id="wpsl_url" name="wpsl_url" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_url', true)) . '" maxlength="200">';
+        echo '</div>';
+        
+        echo '</fieldset>';
+        
+        // Submit buttons
+        echo '<div class="form-actions">';
+        echo '<button type="submit" class="button button-primary button-large">' . __('Update Store Details', 'storelocator-list') . '</button>';
+        echo '<a href="' . home_url('/store-manager/') . '" class="button button-secondary">' . __('Cancel', 'storelocator-list') . '</a>';
+        echo '</div>';
+        
+        echo '</form>';
+        echo '</div>'; // .sllist-store-update-form
+    }
+    
+    /**
+     * Get token information without password validation
+     * 
+     * @param string $token Access token
+     * @return array|false Token info or false if invalid
+     */
+    private function get_token_info($token) {
+        if (empty($token)) {
+            return false;
+        }
+        
+        // Find store by token
+        $stores = get_posts([
+            'post_type' => 'wpsl_stores',
+            'meta_key' => SLList_Security::META_ACCESS_TOKEN,
+            'meta_value' => sanitize_text_field($token),
+            'meta_compare' => '=',
+            'posts_per_page' => 1,
+            'post_status' => ['publish', 'pending']
+        ]);
+        
+        if (empty($stores)) {
+            return false;
+        }
+        
+        $store = $stores[0];
+        $store_id = $store->ID;
+        
+        // Check if token is already used
+        $token_used = get_post_meta($store_id, SLList_Security::META_TOKEN_USED, true);
+        if ($token_used) {
+            return false;
+        }
+        
+        // Check if token is expired
+        $expires = get_post_meta($store_id, SLList_Security::META_TOKEN_EXPIRES, true);
+        if ($expires && time() > $expires) {
+            return false;
+        }
+        
+        // Get additional info
+        $attempts = get_post_meta($store_id, SLList_Security::META_ACCESS_ATTEMPTS, true) ?: 0;
+        
+        return [
+            'store' => $store,
+            'store_id' => $store_id,
+            'token' => $token,
+            'expires' => $expires,
+            'attempts' => $attempts,
+            'used' => $token_used
+        ];
+    }
+    
+    /**
+     * Enqueue scripts and styles for store update page
+     */
+    public function enqueue_scripts() {
+        // Check if this is our store update page
+        $is_store_update = false;
+        
+        if (get_query_var('sllist_page') === 'store_update' || 
+            (isset($_GET['sllist_page']) && $_GET['sllist_page'] === 'store_update') ||
+            preg_match('#/update-store/?(\?.*)?$#', $_SERVER['REQUEST_URI'] ?? '')) {
+            $is_store_update = true;
+        }
+        
+        // Only enqueue on our update page
+        if (!$is_store_update) {
+            return;
+        }
+        
+        // Get plugin instance to access URLs
+        $plugin = \StoreLocatorList\SLList_Plugin::get_instance();
+        
+        // Enqueue jQuery if not already loaded
+        if (!wp_script_is('jquery', 'enqueued')) {
+            wp_enqueue_script('jquery');
+        }
+        
+        // Enqueue styles
+        wp_enqueue_style(
+            'sllist-store-update',
+            $plugin->get_plugin_url() . 'assets/css/store-update.css',
+            array(),
+            \StoreLocatorList\SLList_Plugin::VERSION
+        );
+        
+        // Enqueue scripts
+        wp_enqueue_script(
+            'sllist-store-update',
+            $plugin->get_plugin_url() . 'assets/js/store-update.js',
+            array('jquery'),
+            \StoreLocatorList\SLList_Plugin::VERSION,
+            true
+        );
+        
+        // Localize script for AJAX
+        wp_localize_script('sllist-store-update', 'sllist_update', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'auth_nonce' => wp_create_nonce('sllist_auth_nonce'),
+            'update_nonce' => wp_create_nonce('sllist_update_nonce'),
+            'strings' => array(
+                'authenticating' => __('Authenticating...', 'storelocator-list'),
+                'updating' => __('Updating store details...', 'storelocator-list'),
+                'error' => __('An error occurred. Please try again.', 'storelocator-list'),
+                'invalid_password' => __('Invalid password. Please check your email and try again.', 'storelocator-list'),
+                'success' => __('Store details updated successfully!', 'storelocator-list'),
+                'too_many_attempts' => __('Too many failed attempts. Please request new access.', 'storelocator-list')
+            )
+        ));
+    }
+    
+    /**
+     * AJAX handler for authenticating store access
+     */
+    public function ajax_authenticate_store_access() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['sllist_auth_nonce'] ?? '', 'sllist_auth_nonce')) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Security check failed. Please refresh the page and try again.', 'storelocator-list')
+            )));
+        }
+        
+        $token = sanitize_text_field($_POST['token'] ?? '');
+        $password = sanitize_text_field($_POST['access_password'] ?? '');
+        
+        if (empty($token) || empty($password)) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Token and password are required.', 'storelocator-list')
+            )));
+        }
+        
+        // Validate credentials using security class
+        $store_data = SLList_Security::validate_access_credentials($token, $password);
+        
+        if (!$store_data) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Invalid password or token. Please check your credentials and try again.', 'storelocator-list')
+            )));
+        }
+        
+        // Success - return HTML for the update form
+        ob_start();
+        $this->display_store_update_form($store_data);
+        $form_html = ob_get_clean();
+        
+        wp_die(json_encode(array(
+            'success' => true,
+            'data' => array(
+                'html' => $form_html,
+                'store_name' => $store_data['store']->post_title
+            )
+        )));
+    }
+    
+    /**
+     * AJAX handler for updating store details
+     */
+    public function ajax_update_store_details() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['sllist_update_nonce'] ?? '', 'sllist_update_nonce')) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Security check failed. Please refresh the page and try again.', 'storelocator-list')
+            )));
+        }
+        
+        $token = sanitize_text_field($_POST['token'] ?? '');
+        $store_id = intval($_POST['store_id'] ?? 0);
+        
+        if (empty($token) || $store_id <= 0) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Invalid request parameters.', 'storelocator-list')
+            )));
+        }
+        
+        // Validate token is still valid and get store data
+        $token_info = $this->get_token_info($token);
+        if (!$token_info || $token_info['store_id'] !== $store_id) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Invalid or expired access token.', 'storelocator-list')
+            )));
+        }
+        
+        // Sanitize and validate form data
+        $store_data = $this->sanitize_store_update_data($_POST);
+        $validation_errors = $this->validate_store_update_data($store_data);
+        
+        if (!empty($validation_errors)) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => implode(' ', $validation_errors)
+            )));
+        }
+        
+        // Update the store
+        $update_result = $this->update_store_data($store_id, $store_data);
+        
+        if (!$update_result) {
+            wp_die(json_encode(array(
+                'success' => false,
+                'data' => __('Failed to update store details. Please try again.', 'storelocator-list')
+            )));
+        }
+        
+        // Mark token as used
+        SLList_Security::mark_token_used($store_id);
+        
+        // Send confirmation email
+        $this->send_update_confirmation_email($token_info['store'], $store_data);
+        
+        wp_die(json_encode(array(
+            'success' => true,
+            'data' => __('Store details updated successfully! Your changes have been saved.', 'storelocator-list')
+        )));
+    }
+    
+    /**
+     * Sanitize store update data
+     * 
+     * @param array $post_data Raw POST data
+     * @return array Sanitized data
+     */
+    private function sanitize_store_update_data($post_data) {
+        return array(
+            'store_name' => sanitize_text_field($post_data['store_name'] ?? ''),
+            'store_description' => sanitize_textarea_field($post_data['store_description'] ?? ''),
+            'wpsl_address' => sanitize_text_field($post_data['wpsl_address'] ?? ''),
+            'wpsl_address2' => sanitize_text_field($post_data['wpsl_address2'] ?? ''),
+            'wpsl_city' => sanitize_text_field($post_data['wpsl_city'] ?? ''),
+            'wpsl_state' => sanitize_text_field($post_data['wpsl_state'] ?? ''),
+            'wpsl_zip' => sanitize_text_field($post_data['wpsl_zip'] ?? ''),
+            'wpsl_phone' => sanitize_text_field($post_data['wpsl_phone'] ?? ''),
+            'wpsl_email' => sanitize_email($post_data['wpsl_email'] ?? ''),
+            'wpsl_url' => esc_url_raw($post_data['wpsl_url'] ?? '')
+        );
+    }
+    
+    /**
+     * Validate store update data
+     * 
+     * @param array $store_data Sanitized store data
+     * @return array Validation errors
+     */
+    private function validate_store_update_data($store_data) {
+        $errors = array();
+        
+        // Store name is required
+        if (empty($store_data['store_name'])) {
+            $errors[] = __('Store name is required.', 'storelocator-list');
+        }
+        
+        // Validate email if provided
+        if (!empty($store_data['wpsl_email']) && !is_email($store_data['wpsl_email'])) {
+            $errors[] = __('Please enter a valid email address.', 'storelocator-list');
+        }
+        
+        // Validate URL if provided
+        if (!empty($store_data['wpsl_url']) && !filter_var($store_data['wpsl_url'], FILTER_VALIDATE_URL)) {
+            $errors[] = __('Please enter a valid website URL.', 'storelocator-list');
+        }
+        
+        return $errors;
+    }
+    
+    /**
+     * Update store data in the database
+     * 
+     * @param int $store_id Store post ID
+     * @param array $store_data Validated store data
+     * @return bool Success status
+     */
+    private function update_store_data($store_id, $store_data) {
+        // Update post data
+        $post_update = wp_update_post(array(
+            'ID' => $store_id,
+            'post_title' => $store_data['store_name'],
+            'post_content' => $store_data['store_description'],
+        ), true);
+        
+        if (is_wp_error($post_update)) {
+            return false;
+        }
+        
+        // Update post meta
+        $meta_fields = array(
+            'wpsl_address' => $store_data['wpsl_address'],
+            'wpsl_address2' => $store_data['wpsl_address2'],
+            'wpsl_city' => $store_data['wpsl_city'],
+            'wpsl_state' => $store_data['wpsl_state'],
+            'wpsl_zip' => $store_data['wpsl_zip'],
+            'wpsl_phone' => $store_data['wpsl_phone'],
+            'wpsl_email' => $store_data['wpsl_email'],
+            'wpsl_url' => $store_data['wpsl_url']
+        );
+        
+        foreach ($meta_fields as $meta_key => $meta_value) {
+            update_post_meta($store_id, $meta_key, $meta_value);
+        }
+        
+        // Log the update
+        $this->log_store_update($store_id, $store_data);
+        
+        return true;
+    }
+    
+    /**
+     * Log store update for audit trail
+     * 
+     * @param int $store_id Store post ID
+     * @param array $store_data Updated store data
+     */
+    private function log_store_update($store_id, $store_data) {
+        $log_data = array(
+            'timestamp' => current_time('mysql'),
+            'store_id' => $store_id,
+            'updated_fields' => array_keys($store_data),
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
+        );
+        
+        // Store as post meta for audit purposes
+        add_post_meta($store_id, 'sllist_update_log', $log_data);
+    }
+    
+    /**
+     * Send update confirmation email to store owner
+     * 
+     * @param \WP_Post $store Store post object
+     * @param array $store_data Updated store data
+     */
+    private function send_update_confirmation_email($store, $store_data) {
+        $store_email = $store_data['wpsl_email'];
+        
+        // Don't send if no email
+        if (empty($store_email)) {
+            return;
+        }
+        
+        $subject = sprintf(
+            __('Store Details Updated - %s', 'storelocator-list'),
+            get_bloginfo('name')
+        );
+        
+        $message = $this->get_confirmation_email_template($store, $store_data);
+        
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+        );
+        
+        wp_mail($store_email, $subject, $message, $headers);
+    }
+    
+    /**
+     * Get confirmation email template
+     * 
+     * @param \WP_Post $store Store post object
+     * @param array $store_data Updated store data
+     * @return string Email HTML content
+     */
+    private function get_confirmation_email_template($store, $store_data) {
+        $store_name = esc_html($store_data['store_name']);
+        $site_name = get_bloginfo('name');
+        $update_date = date_i18n(get_option('date_format') . ' ' . get_option('time_format'));
+        
+        return '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>' . esc_html($subject ?? '') . '</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+                .content { padding: 20px 0; }
+                .button { display: inline-block; background: #0073aa; color: white !important; padding: 12px 20px; text-decoration: none; border-radius: 3px; margin: 10px 0; }
+                .success { background: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 3px; margin: 15px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Store Details Updated Successfully</h1>
+                    <p>Confirmation for: <strong>' . $store_name . '</strong></p>
+                </div>
+                
+                <div class="content">
+                    <div class="success">
+                        <h3>✓ Update Confirmed</h3>
+                        <p>Your store details have been successfully updated on ' . esc_html($site_name) . ' at ' . $update_date . '.</p>
+                    </div>
+                    
+                    <h3>Updated Information:</h3>
+                    <ul>
+                        <li><strong>Store Name:</strong> ' . esc_html($store_data['store_name']) . '</li>';
+        
+        if (!empty($store_data['wpsl_address'])) {
+            $message .= '<li><strong>Address:</strong> ' . esc_html($store_data['wpsl_address']) . '</li>';
+        }
+        
+        if (!empty($store_data['wpsl_city']) || !empty($store_data['wpsl_state'])) {
+            $message .= '<li><strong>City/State:</strong> ' . esc_html(trim($store_data['wpsl_city'] . ' ' . $store_data['wpsl_state'])) . '</li>';
+        }
+        
+        if (!empty($store_data['wpsl_phone'])) {
+            $message .= '<li><strong>Phone:</strong> ' . esc_html($store_data['wpsl_phone']) . '</li>';
+        }
+        
+        if (!empty($store_data['wpsl_email'])) {
+            $message .= '<li><strong>Email:</strong> ' . esc_html($store_data['wpsl_email']) . '</li>';
+        }
+        
+        $message .= '
+                    </ul>
+                    
+                    <h3>Security Information:</h3>
+                    <p>Your access token has been automatically deactivated for security. If you need to make additional changes, please request new access from the store manager page.</p>
+                    
+                    <a href="' . home_url('/store-manager/') . '" class="button">Request New Access</a>
+                    
+                    <p><small>If you did not make these changes, please contact us immediately at ' . get_option('admin_email') . '</small></p>
+                </div>
+            </div>
+        </body>
+        </html>';
+    }
+}

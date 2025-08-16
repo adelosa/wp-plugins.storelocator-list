@@ -2,12 +2,32 @@
 /**
  * Test Security Implementation
  * This file tests the database schema and security functions
+ * 
+ * Access via: http://localhost:8080/wp-content/plugins/storelocator-list/tests/test-security.php
  */
 
-// Include WordPress test environment (normally loaded by WordPress)
-if (!defined('ABSPATH')) {
-    define('ABSPATH', '/tmp/test/');
-    define('HOUR_IN_SECONDS', 3600);
+// Try to load WordPress first
+$wp_load_paths = [
+    dirname(__FILE__) . '/../../../../wp-load.php',
+    dirname(__FILE__) . '/../../../wp-load.php',
+    dirname(__FILE__) . '/../../wp-load.php'
+];
+
+$wp_loaded = false;
+foreach ($wp_load_paths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $wp_loaded = true;
+        break;
+    }
+}
+
+// If WordPress isn't loaded, include minimal testing environment
+if (!$wp_loaded) {
+    if (!defined('ABSPATH')) {
+        define('ABSPATH', '/tmp/test/');
+        define('HOUR_IN_SECONDS', 3600);
+    }
 }
 
 // Mock WordPress functions for testing

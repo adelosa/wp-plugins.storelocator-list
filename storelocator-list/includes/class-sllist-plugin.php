@@ -87,10 +87,18 @@ class SLList_Plugin {
         
         // Public classes
         require_once $this->plugin_path . 'includes/public/class-sllist-store-search.php';
-        // require_once $this->plugin_path . 'includes/public/class-sllist-store-update.php';
+        require_once $this->plugin_path . 'includes/public/class-sllist-store-update.php';
         
         // Admin classes (will be added in future phases)
         // require_once $this->plugin_path . 'includes/admin/class-sllist-admin.php';
+        
+        // Development/Testing files (only load if WP_DEBUG is enabled or in admin)
+        if ((defined('WP_DEBUG') && WP_DEBUG) || is_admin()) {
+            $test_file = $this->plugin_path . 'includes/admin/admin-test-page.php';
+            if (file_exists($test_file)) {
+                require_once $test_file;
+            }
+        }
     }
     
     /**
@@ -105,6 +113,7 @@ class SLList_Plugin {
         
         // Initialize public components
         new PublicPages\SLList_Store_Search();
+        new PublicPages\SLList_Store_Update();
         
         // Check if we need to flush rewrite rules
         if (get_option('sllist_flush_rewrite_rules', false)) {

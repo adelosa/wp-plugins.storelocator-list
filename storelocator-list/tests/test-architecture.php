@@ -1,7 +1,8 @@
 <?php
 /**
  * Test file to verify the new plugin architecture
- * This file can be deleted after testing
+ * 
+ * Access via: http://localhost:8080/wp-content/plugins/storelocator-list/tests/test-architecture.php
  */
 
 // This would normally be loaded via WordPress, but for testing we'll simulate it
@@ -9,10 +10,20 @@ if (!defined('ABSPATH')) {
     define('ABSPATH', '/tmp/');
 }
 
+// Get the plugin root directory
+$plugin_dir = dirname(dirname(__FILE__));
+
 // Load our plugin classes
-require_once 'includes/class-sllist-plugin.php';
-require_once 'includes/core/class-sllist-shortcodes.php';
-require_once 'includes/core/class-sllist-query-helper.php';
+$includes_dir = $plugin_dir . '/includes/';
+if (file_exists($includes_dir . 'class-sllist-plugin.php')) {
+    require_once $includes_dir . 'class-sllist-plugin.php';
+}
+if (file_exists($includes_dir . 'core/class-sllist-shortcodes.php')) {
+    require_once $includes_dir . 'core/class-sllist-shortcodes.php';
+}
+if (file_exists($includes_dir . 'core/class-sllist-query-helper.php')) {
+    require_once $includes_dir . 'core/class-sllist-query-helper.php';
+}
 
 echo "✅ Plugin Architecture Test\n";
 echo "==========================\n\n";
@@ -44,14 +55,15 @@ echo "\n2. Testing file structure:\n";
 $files_to_check = [
     'assets/css/sllist-styles.css',
     'assets/js/sllist-scripts.js',
-    'ARCHITECTURE.md',
+    'docs/ARCHITECTURE.md',
     'includes/class-sllist-plugin.php',
     'includes/core/class-sllist-shortcodes.php',
     'includes/core/class-sllist-query-helper.php'
 ];
 
 foreach ($files_to_check as $file) {
-    if (file_exists($file)) {
+    $full_path = $plugin_dir . '/' . $file;
+    if (file_exists($full_path)) {
         echo "   ✅ $file exists\n";
     } else {
         echo "   ❌ $file missing\n";

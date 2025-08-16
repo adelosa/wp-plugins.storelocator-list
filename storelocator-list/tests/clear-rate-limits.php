@@ -2,12 +2,30 @@
 /**
  * Clear Rate Limiting Cache
  * 
- * Run this script to clear all rate limiting data
+ * Run this script to clear all rate limiting data.
+ * 
+ * Access via: http://localhost:8080/wp-content/plugins/storelocator-list/tests/clear-rate-limits.php
  */
 
-// Load WordPress
-require_once('wp-config.php');
-require_once('wp-load.php');
+// WordPress environment
+$wp_load_paths = [
+    dirname(__FILE__) . '/../../../../wp-load.php',
+    dirname(__FILE__) . '/../../../wp-load.php',
+    dirname(__FILE__) . '/../../wp-load.php'
+];
+
+$wp_loaded = false;
+foreach ($wp_load_paths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $wp_loaded = true;
+        break;
+    }
+}
+
+if (!$wp_loaded || !defined('ABSPATH')) {
+    die('<h1>WordPress Not Found</h1><p>Could not load WordPress. Please access this file through your WordPress installation.</p><p>Try: <code>http://localhost:8080/wp-content/plugins/storelocator-list/tests/clear-rate-limits.php</code></p>');
+}
 
 echo "<h1>Clearing Rate Limiting Cache</h1>";
 

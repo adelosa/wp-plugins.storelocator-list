@@ -1,0 +1,361 @@
+/**
+ * Store Update Page Styles
+ * 
+ * @package StoreLocator-List
+ * @since 0.2.0
+ */
+
+/* =============================================================================
+   Store Update Page Layout
+   ========================================================================== */
+
+.sllist-store-update-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+    line-height: 1.6;
+}
+
+.sllist-store-update-page .container {
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* =============================================================================
+   Headers and Typography
+   ========================================================================== */
+
+.sllist-store-update-page h1 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #23282d;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 10px;
+}
+
+.sllist-store-update-page h2 {
+    font-size: 22px;
+    margin-bottom: 15px;
+    color: #23282d;
+}
+
+.sllist-store-update-page h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #23282d;
+}
+
+/* =============================================================================
+   Error and Status Messages
+   ========================================================================== */
+
+.sllist-update-error {
+    background: #fbeaea;
+    border: 1px solid #dc3232;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.sllist-update-error h1 {
+    color: #dc3232;
+    border-bottom: none;
+    margin-bottom: 15px;
+}
+
+.sllist-security-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.sllist-security-warning p {
+    margin: 0;
+    color: #856404;
+}
+
+/* =============================================================================
+   Store Information Display
+   ========================================================================== */
+
+.store-info {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.store-info h2 {
+    margin-top: 0;
+    color: #0073aa;
+}
+
+.store-location {
+    color: #666;
+    font-style: italic;
+    margin: 5px 0;
+}
+
+/* =============================================================================
+   Forms
+   ========================================================================== */
+
+.sllist-authentication-form,
+.sllist-store-update-form {
+    margin: 20px 0;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #23282d;
+}
+
+.form-group .required {
+    color: #dc3232;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group input[type="url"],
+.form-group input[type="password"],
+.form-group textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: 0;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.help-text {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+    margin-bottom: 0;
+}
+
+/* Form row for side-by-side fields */
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.form-group-half {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* Fieldsets */
+fieldset {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+fieldset legend {
+    font-weight: 600;
+    font-size: 16px;
+    color: #23282d;
+    padding: 0 10px;
+}
+
+/* =============================================================================
+   Buttons
+   ========================================================================== */
+
+.button {
+    display: inline-block;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+    text-align: center;
+    text-decoration: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    box-sizing: border-box;
+}
+
+.button-primary {
+    background-color: #0073aa;
+    border-color: #0073aa;
+    color: #fff;
+}
+
+.button-primary:hover {
+    background-color: #005a87;
+    border-color: #005a87;
+    color: #fff;
+}
+
+.button-secondary {
+    background-color: #f7f7f7;
+    border-color: #ccc;
+    color: #555;
+}
+
+.button-secondary:hover {
+    background-color: #fafafa;
+    border-color: #999;
+    color: #23282d;
+}
+
+.button-large {
+    padding: 12px 20px;
+    font-size: 16px;
+}
+
+/* Form actions */
+.form-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+    text-align: left;
+}
+
+.form-actions .button {
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+/* =============================================================================
+   Expiry and Status Information
+   ========================================================================== */
+
+.expiry-info {
+    margin-top: 15px;
+    color: #666;
+    font-size: 12px;
+    text-align: center;
+}
+
+/* =============================================================================
+   Loading States
+   ========================================================================== */
+
+.sllist-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.sllist-loading::after {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    border: 2px solid #ccc;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* =============================================================================
+   Success Messages
+   ========================================================================== */
+
+.sllist-success {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+    color: #155724;
+}
+
+.sllist-success h3 {
+    margin-top: 0;
+    color: #155724;
+}
+
+/* =============================================================================
+   Admin Notices
+   ========================================================================== */
+
+.sllist-admin-notice {
+    background: #f0f0f1;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.sllist-admin-notice code {
+    background: #fff;
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12px;
+}
+
+/* =============================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .sllist-store-update-page {
+        padding: 10px;
+    }
+    
+    .sllist-store-update-page .container {
+        padding: 20px;
+    }
+    
+    .sllist-store-update-page h1 {
+        font-size: 24px;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .form-group-half {
+        margin-bottom: 20px;
+    }
+    
+    .form-actions .button {
+        display: block;
+        width: 100%;
+        margin-right: 0;
+        text-align: center;
+    }
+}

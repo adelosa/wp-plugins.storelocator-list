@@ -2,9 +2,21 @@
 /**
  * Simple Store Search Test
  * 
+ * This file contains code to test the store search functionality.
+ * 
+ * USAGE:
  * Add this code to your theme's functions.php file temporarily to test
- * the store search functionality.
+ * the store search functionality, then visit any page with ?sllist_page=store_manager
+ * 
+ * EXAMPLE: http://localhost:8080/?sllist_page=store_manager
+ * 
+ * Remember to remove from functions.php after testing!
  */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit('This file should not be accessed directly. Include the code in functions.php.');
+}
 
 // Test function to check if our query var is working
 function sllist_test_query_var() {

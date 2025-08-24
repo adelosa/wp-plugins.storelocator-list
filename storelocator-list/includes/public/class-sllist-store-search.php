@@ -178,14 +178,15 @@ class SLList_Store_Search {
         // Manually enqueue scripts since we're bypassing normal WordPress flow
         $this->enqueue_scripts();
         
-        // Check if we have a proper theme with header/footer
+        // Check if we have a traditional theme with header/footer or if it's a block theme
+        $is_block_theme = function_exists('wp_is_block_theme') && wp_is_block_theme();
         $theme_has_header = locate_template('header.php');
         $theme_has_footer = locate_template('footer.php');
         
-        if ($theme_has_header) {
+        if ($theme_has_header && !$is_block_theme) {
             get_header();
         } else {
-            // Minimal HTML header for themes without header.php
+            // Minimal HTML header for block themes or themes without header.php
             echo '<!DOCTYPE html>';
             echo '<html ' . get_language_attributes() . '>';
             echo '<head>';
@@ -218,10 +219,10 @@ class SLList_Store_Search {
         echo '</div>';
         echo '</div>';
         
-        if ($theme_has_footer) {
+        if ($theme_has_footer && !$is_block_theme) {
             get_footer();
         } else {
-            // Minimal HTML footer for themes without footer.php
+            // Minimal HTML footer for block themes or themes without footer.php
             wp_footer();
             echo '</body>';
             echo '</html>';

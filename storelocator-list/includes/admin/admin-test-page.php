@@ -628,15 +628,6 @@ class SLList_Store_Update_Test {
 
 // Initialize the test page if we're in admin
 if (is_admin()) {
-    new SLList_Store_Update_Test();
-    
-    // Add debug notice to confirm loading
-    add_action('admin_notices', function() {
-        if (current_user_can('manage_options')) {
-            echo '<div class="notice notice-success is-dismissible">';
-            echo '<p><strong>Store Update Test:</strong> Admin test page loaded successfully! Check Tools menu.</p>';
-            echo '</div>';
-        }
-    });
+    new SLList_Store_Update_Test();   
 }
 ?>

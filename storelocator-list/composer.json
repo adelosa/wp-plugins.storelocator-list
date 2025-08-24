@@ -1,0 +1,23 @@
+{
+    "name": "adelosa/storelocator-list",
+    "description": "Store Locator List Plugin - Import/Export functionality",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "adelosa",
+            "email": "adelosa@example.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "phpoffice/phpspreadsheet": "^1.26.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "StoreLocatorList\\": "includes/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

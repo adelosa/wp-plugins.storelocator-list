@@ -18,7 +18,7 @@ class SLList_Plugin {
     /**
      * Plugin version
      */
-    const VERSION = '0.2.0';
+    const VERSION = '0.2.1';
     
     /**
      * Plugin instance
@@ -91,16 +91,24 @@ class SLList_Plugin {
         require_once $this->plugin_path . 'includes/public/class-sllist-store-search.php';
         require_once $this->plugin_path . 'includes/public/class-sllist-store-update.php';
         
-        // Admin classes (will be added in future phases)
-        // require_once $this->plugin_path . 'includes/admin/class-sllist-admin.php';
+        // Admin classes
+        if (is_admin()) {
+            require_once $this->plugin_path . 'includes/admin/class-sllist-import-export.php';
+        }
         
         // Development/Testing files (only load if WP_DEBUG is enabled or in admin)
-        if ((defined('WP_DEBUG') && WP_DEBUG) || is_admin()) {
-            $test_file = $this->plugin_path . 'includes/admin/admin-test-page.php';
-            if (file_exists($test_file)) {
-                require_once $test_file;
-            }
-        }
+        // if ((defined('WP_DEBUG') && WP_DEBUG) || is_admin()) {
+        //     $test_file = $this->plugin_path . 'includes/admin/admin-test-page.php';
+        //     if (file_exists($test_file)) {
+        //         require_once $test_file;
+        //     }
+            
+        //     // Load import/export test page
+        //     $import_export_test = $this->plugin_path . 'tests/import-export-test.php';
+        //     if (file_exists($import_export_test)) {
+        //         require_once $import_export_test;
+        //     }
+        // }
     }
     
     /**
@@ -118,6 +126,11 @@ class SLList_Plugin {
         // Initialize public components
         new PublicPages\SLList_Store_Search();
         new PublicPages\SLList_Store_Update();
+        
+        // Initialize admin components
+        if (is_admin()) {
+            new Admin\SLList_Import_Export();
+        }
         
         // Check if we need to flush rewrite rules
         if (get_option('sllist_flush_rewrite_rules', false)) {

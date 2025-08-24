@@ -1,0 +1,36 @@
+# Composer dependencies
+vendor/
+composer.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# WordPress
+wp-config.php
+wp-content/uploads/
+wp-content/cache/
+wp-content/backups/
+
+# Logs
+*.log
+error_log
+
+# Test files
+**/tests/output/
+**/tests/temp/
+
+# Export files (exclude generated exports)
+*.xlsx
+*.xls

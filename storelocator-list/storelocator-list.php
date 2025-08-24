@@ -1,14 +1,14 @@
 <?php
 /**
  * @package StoreLocator-List
- * @version 0.2.0
+ * @version 0.2.1
  */
 /*
 Plugin Name: WP Store Locator List
 Plugin URI: https://github.com/adelosa/wp-plugins.storelocator-list
 Description: Provides ability to add list of stores via shortcode with self-service store owner updates
 Author: Anthony Delosa
-Version: 0.2.0
+Version: 0.2.1
 Text Domain: storelocator-list
 Domain Path: /languages
 Requires at least: 5.0
@@ -23,10 +23,15 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('SLLIST_VERSION', '0.2.0');
+define('SLLIST_VERSION', '0.2.1');
 define('SLLIST_PLUGIN_FILE', __FILE__);
 define('SLLIST_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('SLLIST_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+// Load Composer autoloader if available
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
 
 /**
  * Register query variables early - this must happen before WordPress processes rewrite rules

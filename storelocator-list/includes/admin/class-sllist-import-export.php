@@ -473,6 +473,9 @@ class SLList_Import_Export {
         
         $import_mode = sanitize_text_field($_POST['import_mode'] ?? 'update');
         
+        // Clear any previous debug logs
+        error_log("SLList Import: Starting import process in {$import_mode} mode");
+        
         try {
             $result = $this->import_stores_from_excel($_FILES['import_file'], $import_mode);
             
@@ -482,6 +485,7 @@ class SLList_Import_Export {
             )));
             
         } catch (Exception $e) {
+            error_log("SLList Import: Error - " . $e->getMessage());
             wp_die(json_encode(array(
                 'success' => false,
                 'data' => $e->getMessage()
@@ -520,6 +524,11 @@ class SLList_Import_Export {
         
         // Map headers to column indices
         $header_map = array_flip($headers);
+        
+        // Debug: Log header mapping
+        error_log("SLList Import: Headers found: " . print_r($headers, true));
+        error_log("SLList Import: Header map: " . print_r($header_map, true));
+        error_log("SLList Import: Store ID column index: " . ($header_map['Store ID'] ?? 'NOT FOUND'));
         
         // Delete all stores if replace mode
         if ($import_mode === 'replace') {
@@ -570,20 +579,44 @@ class SLList_Import_Export {
      */
     private function process_import_row($row, $header_map, $import_mode) {
         // Extract data from row
-        $store_id = !empty($header_map['Store ID']) ? intval($row[$header_map['Store ID']]) : 0;
+        $store_id = 0;
+        
+        // Try different possible ways the Store ID column might be named
+        $store_id_columns = array('Store ID', 'store_id', 'ID', 'id', 'StoreID');
+        foreach ($store_id_columns as $col_name) {
+            if (isset($header_map[$col_name]) && !empty($row[$header_map[$col_name]])) {
+                $store_id = intval($row[$header_map[$col_name]]);
+                break;
+            }
+        }
+        
         $store_name = $row[$header_map['Store Name']] ?? '';
         
         if (empty($store_name)) {
             throw new Exception(__('Store name is required.', 'storelocator-list'));
         }
         
+        // Debug: Log what we're processing
+        error_log("SLList Import: Processing row - Store Name: {$store_name}, Store ID: {$store_id}");
+        
         // Check if store exists
         $existing_store = false;
         if ($store_id > 0) {
             $existing_store = get_post($store_id);
-            if ($existing_store && $existing_store->post_type !== 'wpsl_stores') {
+            // Verify it's actually a store and not deleted
+            if ($existing_store && 
+                $existing_store->post_type === 'wpsl_stores' && 
+                $existing_store->post_status !== 'trash') {
+                // Store exists and is valid
+                error_log("SLList Import: Found existing store ID {$store_id} - {$store_name}");
+            } else {
                 $existing_store = false;
+                if ($store_id > 0) {
+                    error_log("SLList Import: Store ID {$store_id} not found or invalid - {$store_name}");
+                }
             }
+        } else {
+            error_log("SLList Import: No Store ID provided for - {$store_name}");
         }
         
         // Handle import mode logic
@@ -629,9 +662,8 @@ class SLList_Import_Export {
         );
         
         foreach ($meta_fields as $meta_key => $meta_value) {
-            if (!empty($meta_value)) {
-                update_post_meta($post_id, $meta_key, sanitize_text_field($meta_value));
-            }
+            // Always update meta fields, even if empty (to allow clearing values)
+            update_post_meta($post_id, $meta_key, sanitize_text_field($meta_value));
         }
         
         // Handle categories

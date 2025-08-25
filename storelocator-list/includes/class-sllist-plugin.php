@@ -95,20 +95,6 @@ class SLList_Plugin {
         if (is_admin()) {
             require_once $this->plugin_path . 'includes/admin/class-sllist-import-export.php';
         }
-        
-        // Development/Testing files (only load if WP_DEBUG is enabled or in admin)
-        if ((defined('WP_DEBUG') && WP_DEBUG) || is_admin()) {
-            $test_file = $this->plugin_path . 'includes/admin/admin-test-page.php';
-            if (file_exists($test_file)) {
-                require_once $test_file;
-            }
-            
-            // Load import/export test page
-            $import_export_test = $this->plugin_path . 'tests/import-export-test.php';
-            if (file_exists($import_export_test)) {
-                require_once $import_export_test;
-            }
-        }
     }
     
     /**

@@ -691,6 +691,9 @@ class SLList_Import_Export {
             }
         }
         
+        // Check if address has changed and trigger geocoding if needed
+        $this->maybe_trigger_geocoding($post_id, $meta_fields, $existing_store);
+        
         return array('action' => $action, 'post_id' => $post_id);
     }
     
@@ -707,6 +710,94 @@ class SLList_Import_Export {
         
         foreach ($stores as $store_id) {
             wp_delete_post($store_id, true);
+        }
+    }
+    
+    /**
+     * Check if address has changed and trigger geocoding if needed
+     * Only geocodes when address data actually changes to minimize API costs
+     * 
+     * @param int $post_id Store post ID
+     * @param array $new_meta_fields New meta field values
+     * @param WP_Post|null $existing_store Existing store post (null for new stores)
+     */
+    private function maybe_trigger_geocoding($post_id, $new_meta_fields, $existing_store = null) {
+        // Don't geocode if WP Store Locator's geocode class is not available
+        global $wpsl_admin;
+        if (!isset($wpsl_admin) || !isset($wpsl_admin->geocode)) {
+            return;
+        }
+        
+        // Address fields that trigger geocoding when changed
+        $address_fields = array('wpsl_address', 'wpsl_address2', 'wpsl_city', 'wpsl_state', 'wpsl_zip', 'wpsl_country');
+        
+        $address_changed = false;
+        
+        if ($existing_store) {
+            // For existing stores, check if any address field has changed
+            foreach ($address_fields as $field) {
+                $old_value = get_post_meta($post_id, $field, true);
+                $new_value = $new_meta_fields[$field] ?? '';
+                
+                if (trim($old_value) !== trim($new_value)) {
+                    $address_changed = true;
+                    error_log("SLList Import: Address field '{$field}' changed for store ID {$post_id}: '{$old_value}' -> '{$new_value}'");
+                    break;
+                }
+            }
+        } else {
+            // For new stores, always trigger geocoding if address data exists
+            $has_address_data = false;
+            foreach ($address_fields as $field) {
+                if (!empty($new_meta_fields[$field])) {
+                    $has_address_data = true;
+                    break;
+                }
+            }
+            $address_changed = $has_address_data;
+            if ($address_changed) {
+                error_log("SLList Import: New store created (ID {$post_id}), triggering geocoding");
+            }
+        }
+        
+        // Only trigger geocoding if address changed and we don't already have valid coordinates
+        if ($address_changed) {
+            $existing_lat = get_post_meta($post_id, 'wpsl_lat', true);
+            $existing_lng = get_post_meta($post_id, 'wpsl_lng', true);
+            
+            // Clear existing coordinates if address changed so geocoding will trigger
+            if ($existing_store && ($existing_lat || $existing_lng)) {
+                error_log("SLList Import: Clearing existing coordinates for store ID {$post_id} due to address change");
+                update_post_meta($post_id, 'wpsl_lat', '');
+                update_post_meta($post_id, 'wpsl_lng', '');
+            }
+            
+            // Prepare store data for geocoding (use WP Store Locator's expected format)
+            $store_data = array();
+            foreach ($address_fields as $field) {
+                $key = str_replace('wpsl_', '', $field);
+                $store_data[$key] = $new_meta_fields[$field] ?? '';
+            }
+            
+            // Add empty lat/lng so geocoding will be triggered
+            $store_data['lat'] = '';
+            $store_data['lng'] = '';
+            
+            error_log("SLList Import: Triggering geocoding for store ID {$post_id} with data: " . json_encode($store_data));
+            
+            // Use WP Store Locator's geocoding system
+            try {
+                $wpsl_admin->geocode->check_geocode_data($post_id, $store_data);
+                error_log("SLList Import: Geocoding completed for store ID {$post_id}");
+            } catch (Exception $e) {
+                error_log("SLList Import: Geocoding failed for store ID {$post_id}: " . $e->getMessage());
+            }
+        } else {
+            if ($existing_store) {
+                error_log("SLList Import: No address changes detected for store ID {$post_id}, skipping geocoding");
+            } else {
+                error_log("SLList Import: No address data provided for new store ID {$post_id}, skipping geocoding");
+            }
         }
     }
 }

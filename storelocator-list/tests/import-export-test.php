@@ -144,6 +144,54 @@ function sllist_import_export_test_page() {
         </div>
         
         <div style="background: #fff; padding: 20px; border: 1px solid #ccc; margin: 20px 0;">
+            <h2>Geocoding Integration Test</h2>
+            
+            <?php 
+            // Check if WP Store Locator geocoding is available
+            global $wpsl_admin;
+            $geocoding_available = isset($wpsl_admin) && isset($wpsl_admin->geocode);
+            ?>
+            
+            <p><strong>Geocoding Status:</strong> 
+            <?php if ($geocoding_available): ?>
+                <span style="color: green;">✓ WP Store Locator geocoding available</span>
+            <?php else: ?>
+                <span style="color: red;">✗ WP Store Locator geocoding not available</span>
+            <?php endif; ?>
+            </p>
+            
+            <?php if ($geocoding_available): ?>
+                <p><strong>How it works:</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>During import, our system detects when address fields change</li>
+                    <li>Geocoding only triggers when address data actually changes (cost optimization)</li>
+                    <li>New stores automatically get geocoded if they have address data</li>
+                    <li>Existing stores only get geocoded if their address changes</li>
+                    <li>Uses WP Store Locator's existing Google Maps API integration</li>
+                </ul>
+                
+                <p><strong>Test the integration:</strong></p>
+                <ol style="margin-left: 20px;">
+                    <li>Create sample stores using the button above</li>
+                    <li>Export them to Excel</li>
+                    <li>Modify some address fields in the Excel file</li>
+                    <li>Import the modified file</li>
+                    <li>Check the debug logs to see geocoding activity</li>
+                </ol>
+                
+                <p><strong>What to look for in debug logs:</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>"Address field changed" - indicates address change detection</li>
+                    <li>"Triggering geocoding" - confirms geocoding API call</li>
+                    <li>"Geocoding completed" - successful coordinate retrieval</li>
+                    <li>"No address changes detected" - cost optimization in action</li>
+                </ul>
+            <?php else: ?>
+                <p style="color: orange;">Enable WP Store Locator plugin to test geocoding integration.</p>
+            <?php endif; ?>
+        </div>
+        
+        <div style="background: #fff; padding: 20px; border: 1px solid #ccc; margin: 20px 0;">
             <h2>Debug Information</h2>
             <pre style="background: #f5f5f5; padding: 10px; overflow: auto;">
 PHP Version: <?php echo PHP_VERSION; ?>

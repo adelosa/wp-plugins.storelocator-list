@@ -1,0 +1,244 @@
+/**
+ * SL List Settings Admin Styles
+ * 
+ * @package StoreLocator-List
+ * @since 0.2.2
+ */
+
+.sllist-settings-container {
+    max-width: 1200px;
+    display: flex;
+    gap: 30px;
+}
+
+.sllist-settings-container form {
+    flex: 2;
+}
+
+.sllist-settings-help {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+}
+
+.sllist-settings-help h3 {
+    margin-top: 0;
+    color: #1d2327;
+    border-bottom: 1px solid #c3c4c7;
+    padding-bottom: 10px;
+}
+
+.sllist-placeholders .placeholder-group {
+    margin-bottom: 20px;
+}
+
+.sllist-placeholders h4 {
+    margin-bottom: 8px;
+    color: #2c3338;
+    font-size: 14px;
+}
+
+.sllist-placeholders ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.sllist-placeholders li {
+    margin-bottom: 5px;
+    font-size: 13px;
+}
+
+.sllist-placeholders code {
+    background: #f6f7f7;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #d63384;
+}
+
+.sllist-placeholders p {
+    font-size: 13px;
+    color: #646970;
+    line-height: 1.4;
+}
+
+/* Settings sections */
+.form-table th {
+    width: 200px;
+    vertical-align: top;
+    padding-top: 15px;
+}
+
+.form-table td {
+    padding-top: 10px;
+    padding-bottom: 15px;
+}
+
+.form-table input[type="text"],
+.form-table textarea {
+    width: 100%;
+    max-width: 500px;
+}
+
+.form-table input.regular-text {
+    max-width: 350px;
+}
+
+.form-table textarea.large-text {
+    height: 80px;
+    resize: vertical;
+}
+
+/* Fields grid */
+.sllist-fields-grid {
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    background: #fff;
+    max-width: 600px;
+}
+
+.sllist-field-row {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #c3c4c7;
+}
+
+.sllist-field-row:last-child {
+    border-bottom: none;
+}
+
+.sllist-field-checkbox {
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.sllist-field-checkbox input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.sllist-field-checkbox .description {
+    font-size: 12px;
+    color: #646970;
+    font-style: italic;
+}
+
+.sllist-field-label {
+    flex: 1;
+}
+
+.sllist-field-label input[type="text"] {
+    width: 100%;
+    max-width: 300px;
+}
+
+/* Color picker */
+.sllist-color-picker {
+    max-width: 100px !important;
+}
+
+/* Section headers */
+.form-table h2 {
+    font-size: 18px;
+    margin: 30px 0 10px 0;
+    padding: 0;
+    border-bottom: 1px solid #c3c4c7;
+    padding-bottom: 10px;
+}
+
+.form-table h2:first-child {
+    margin-top: 0;
+}
+
+/* Responsive design */
+@media screen and (max-width: 1200px) {
+    .sllist-settings-container {
+        flex-direction: column;
+    }
+    
+    .sllist-settings-help {
+        position: static;
+        order: -1;
+    }
+}
+
+@media screen and (max-width: 782px) {
+    .sllist-field-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .sllist-field-checkbox {
+        width: 100%;
+    }
+    
+    .sllist-field-label {
+        width: 100%;
+    }
+    
+    .form-table input[type="text"],
+    .form-table textarea {
+        max-width: 100%;
+    }
+}
+
+/* Success/error messages */
+.notice {
+    margin: 20px 0;
+}
+
+.notice p {
+    margin: 0.5em 0;
+}
+
+/* Help text styling */
+.description {
+    color: #646970;
+    font-size: 13px;
+    font-style: normal;
+    margin-top: 5px;
+}
+
+/* Form section spacing */
+.form-table > tbody > tr > th,
+.form-table > tbody > tr > td {
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.form-table > tbody > tr:last-child > th,
+.form-table > tbody > tr:last-child > td {
+    border-bottom: none;
+}
+
+/* Settings section styling */
+.form-table h3.hndle {
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    border-bottom: none;
+    margin: 30px 0 0 0;
+    padding: 12px 15px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.form-table h3.hndle + .form-table {
+    border: 1px solid #c3c4c7;
+    border-top: none;
+    background: #fff;
+    margin-top: 0;
+}
+
+/* Button styling */
+.submit {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #c3c4c7;
+}

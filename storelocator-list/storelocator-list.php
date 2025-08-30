@@ -52,21 +52,10 @@ add_filter('query_vars', 'sllist_add_query_vars', 1); // Very high priority
 
 /**
  * Add rewrite rules early
+ * Note: This function is kept for compatibility but rules are now added by the main plugin class
  */
 function sllist_add_rewrite_rules() {
-    // Add rewrite rule for store manager page
-    add_rewrite_rule(
-        '^store-manager/?$',
-        'index.php?sllist_page=store_manager',
-        'top'
-    );
-    
-    // Add rewrite rule for store update page
-    add_rewrite_rule(
-        '^update-store/?$',
-        'index.php?sllist_page=store_update',
-        'top'
-    );
+    // Moved to SLList_Plugin::add_rewrite_rules() for proper settings access
 }
 add_action('init', 'sllist_add_rewrite_rules', 1); // Very early in init
 

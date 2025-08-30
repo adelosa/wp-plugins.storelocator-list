@@ -41,13 +41,14 @@ class SLList_Store_Update {
     /**
      * Get the store update page URL
      * 
-     * @param string $token Access token
+     * @param string $token Access token (optional)
      * @param bool $use_pretty_url Whether to use pretty URL or query parameter
      * @return string The store update page URL
      */
     public static function get_store_update_url($token = '', $use_pretty_url = true) {
         if ($use_pretty_url) {
-            $url = home_url('/update-store/');
+            $permalink = \StoreLocatorList\Admin\SLList_Settings::get_setting('update_permalink', 'update-store');
+            $url = home_url('/' . $permalink . '/');
             if (!empty($token)) {
                 $url .= '?token=' . urlencode($token);
             }
@@ -218,10 +219,11 @@ class SLList_Store_Update {
         
         // Show access URLs for convenience (only for admins)
         if (current_user_can('manage_options')) {
+            $update_permalink = \StoreLocatorList\Admin\SLList_Settings::get_setting('update_permalink', 'update-store');
             echo '<div class="sllist-admin-notice" style="background: #f0f0f1; border: 1px solid #c3c4c7; padding: 10px; margin-bottom: 20px; border-radius: 4px;">';
             echo '<p><strong>Admin Notice:</strong> This store update page can be accessed via:</p>';
             echo '<ul>';
-            echo '<li><strong>Pretty URL:</strong> <code>' . home_url('/update-store/') . '</code></li>';
+            echo '<li><strong>Pretty URL:</strong> <code>' . home_url('/' . $update_permalink . '/') . '</code></li>';
             echo '<li><strong>Alternative URL:</strong> <code>' . home_url('/?sllist_page=store_update') . '</code></li>';
             echo '</ul>';
             echo '<p><em>If the pretty URL doesn\'t work, go to Settings → Permalinks and click "Save Changes" to flush rewrite rules.</em></p>';
@@ -283,15 +285,16 @@ class SLList_Store_Update {
         echo '<div class="success-icon" style="font-size: 60px; color: #28a745; margin-bottom: 20px;">✓</div>';
         
         // Main heading
-        echo '<h1 style="color: #28a745; margin-bottom: 20px;">' . __('Update Successful!', 'storelocator-list') . '</h1>';
+        $success_title = \StoreLocatorList\Admin\SLList_Settings::get_setting('update_success_title', 'Update Successful!');
+        echo '<h1 style="color: #28a745; margin-bottom: 20px;">' . esc_html($success_title) . '</h1>';
         
         // Store name
         echo '<h2 style="margin-bottom: 30px; color: #333;">' . esc_html($store_name) . '</h2>';
         
         // Success message
+        $success_message = \StoreLocatorList\Admin\SLList_Settings::get_setting('update_success_message', 'Your store listing has been updated successfully! Your changes have been saved and are now live on the website. You will also receive a confirmation email shortly.');
         echo '<div class="success-message" style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 30px; margin-bottom: 30px; color: #155724;">';
-        echo '<p style="font-size: 18px; margin-bottom: 15px;"><strong>' . __('Your store listing has been updated successfully!', 'storelocator-list') . '</strong></p>';
-        echo '<p>' . __('Your changes have been saved and are now live on the website. You will also receive a confirmation email shortly.', 'storelocator-list') . '</p>';
+        echo '<p style="font-size: 18px; margin-bottom: 15px;"><strong>' . esc_html($success_message) . '</strong></p>';
         echo '</div>';
 
         // Security notice
@@ -301,8 +304,9 @@ class SLList_Store_Update {
 
         // Action buttons
         echo '<div class="action-buttons" style="margin-top: 40px;">';
+        $store_manager_url = \StoreLocatorList\PublicPages\SLList_Store_Search::get_store_manager_url();
         echo '<a href="' . home_url() . '" class="button button-primary button-large" style="background: #0073aa; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; margin-right: 15px;">' . __('Return to Homepage', 'storelocator-list') . '</a>';
-        echo '<a href="' . home_url('/store-manager/') . '" class="button button-secondary button-large" style="background: #6c757d; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px;">' . __('Request New Access', 'storelocator-list') . '</a>';
+        echo '<a href="' . $store_manager_url . '" class="button button-secondary button-large" style="background: #6c757d; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px;">' . __('Request New Access', 'storelocator-list') . '</a>';
         echo '</div>';
 
         echo '</div>'; // .success-content
@@ -325,7 +329,8 @@ class SLList_Store_Update {
         echo '<div class="sllist-update-error">';
         echo '<h1>' . __('Invalid Access', 'storelocator-list') . '</h1>';
         echo '<p>' . __('This page requires a valid access token. Please use the link provided in your email.', 'storelocator-list') . '</p>';
-        echo '<p><a href="' . home_url('/store-manager/') . '" class="button">' . __('Request Store Access', 'storelocator-list') . '</a></p>';
+        $store_manager_url = \StoreLocatorList\PublicPages\SLList_Store_Search::get_store_manager_url();
+        echo '<p><a href="' . $store_manager_url . '" class="button">' . __('Request Store Access', 'storelocator-list') . '</a></p>';
         echo '</div>';
     }
     
@@ -342,7 +347,8 @@ class SLList_Store_Update {
             echo '<div class="sllist-update-error">';
             echo '<h1>' . __('Invalid or Expired Token', 'storelocator-list') . '</h1>';
             echo '<p>' . __('The access token is invalid, expired, or has already been used.', 'storelocator-list') . '</p>';
-            echo '<p><a href="' . home_url('/store-manager/') . '" class="button">' . __('Request New Access', 'storelocator-list') . '</a></p>';
+            $store_manager_url = \StoreLocatorList\PublicPages\SLList_Store_Search::get_store_manager_url();
+            echo '<p><a href="' . $store_manager_url . '" class="button">' . __('Request New Access', 'storelocator-list') . '</a></p>';
             echo '</div>';
             return;
         }
@@ -350,7 +356,8 @@ class SLList_Store_Update {
         $store = $token_info['store'];
         
         echo '<div class="sllist-authentication-form">';
-        echo '<h1>' . __('Store Update Access', 'storelocator-list') . '</h1>';
+        $page_title = \StoreLocatorList\Admin\SLList_Settings::get_setting('update_page_title', 'Store Update Access');
+        echo '<h1>' . esc_html($page_title) . '</h1>';
         echo '<div class="store-info">';
         echo '<h2>' . sprintf(__('Updating: %s', 'storelocator-list'), esc_html($store->post_title)) . '</h2>';
         
@@ -420,8 +427,16 @@ class SLList_Store_Update {
         $token = $store_data['token'];
         
         echo '<div class="sllist-store-update-form">';
-        echo '<h1>' . __('Update Store Details', 'storelocator-list') . '</h1>';
+        
+        $page_title = \StoreLocatorList\Admin\SLList_Settings::get_setting('update_page_title', 'Update Store Details');
+        $instructions = \StoreLocatorList\Admin\SLList_Settings::get_setting('update_page_instructions', 'Please update your store information below. All changes will be reviewed and published after submission.');
+        
+        echo '<h1>' . esc_html($page_title) . '</h1>';
         echo '<h2>' . esc_html($store->post_title) . '</h2>';
+        
+        if (!empty($instructions)) {
+            echo '<p class="update-instructions">' . esc_html($instructions) . '</p>';
+        }
         
         echo '<form id="sllist-update-form" method="post">';
         wp_nonce_field('sllist_update_nonce', 'sllist_update_nonce');
@@ -429,77 +444,177 @@ class SLList_Store_Update {
         echo '<input type="hidden" name="token" value="' . esc_attr($token) . '">';
         echo '<input type="hidden" name="store_id" value="' . esc_attr($store->ID) . '">';
         
+        // Get available fields configuration
+        $available_fields = \StoreLocatorList\Admin\SLList_Settings::get_available_fields();
+        
         // Store Name
-        echo '<div class="form-group">';
-        echo '<label for="store_name">' . __('Store Name', 'storelocator-list') . ' <span class="required">*</span></label>';
-        echo '<input type="text" id="store_name" name="store_name" value="' . esc_attr($store->post_title) . '" required maxlength="200">';
-        echo '</div>';
+        if (\StoreLocatorList\Admin\SLList_Settings::is_field_available('store_name')) {
+            $field_config = $available_fields['store_name'];
+            $required = !empty($field_config['required']) ? ' <span class="required">*</span>' : '';
+            $required_attr = !empty($field_config['required']) ? 'required' : '';
+            
+            echo '<div class="form-group">';
+            echo '<label for="store_name">' . esc_html($field_config['label']) . $required . '</label>';
+            echo '<input type="text" id="store_name" name="store_name" value="' . esc_attr($store->post_title) . '" ' . $required_attr . ' maxlength="200">';
+            echo '</div>';
+        }
         
         // Store Description
-        echo '<div class="form-group">';
-        echo '<label for="store_description">' . __('Store Description', 'storelocator-list') . '</label>';
-        echo '<textarea id="store_description" name="store_description" rows="4" maxlength="1000">' . esc_textarea($store->post_content) . '</textarea>';
-        echo '</div>';
+        if (\StoreLocatorList\Admin\SLList_Settings::is_field_available('store_description')) {
+            $field_config = $available_fields['store_description'];
+            $required = !empty($field_config['required']) ? ' <span class="required">*</span>' : '';
+            $required_attr = !empty($field_config['required']) ? 'required' : '';
+            
+            echo '<div class="form-group">';
+            echo '<label for="store_description">' . esc_html($field_config['label']) . $required . '</label>';
+            echo '<textarea id="store_description" name="store_description" rows="4" maxlength="1000" ' . $required_attr . '>' . esc_textarea($store->post_content) . '</textarea>';
+            echo '</div>';
+        }
         
         // Address fields
-        echo '<fieldset>';
-        echo '<legend>' . __('Address Information', 'storelocator-list') . '</legend>';
+        $address_fields = array('wpsl_address', 'wpsl_address2', 'wpsl_city', 'wpsl_state', 'wpsl_zip');
+        $has_address_fields = false;
+        foreach ($address_fields as $field) {
+            if (\StoreLocatorList\Admin\SLList_Settings::is_field_available($field)) {
+                $has_address_fields = true;
+                break;
+            }
+        }
         
-        echo '<div class="form-group">';
-        echo '<label for="wpsl_address">' . __('Street Address', 'storelocator-list') . '</label>';
-        echo '<input type="text" id="wpsl_address" name="wpsl_address" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_address', true)) . '" maxlength="200">';
-        echo '</div>';
-        
-        echo '<div class="form-group">';
-        echo '<label for="wpsl_address2">' . __('Address Line 2', 'storelocator-list') . '</label>';
-        echo '<input type="text" id="wpsl_address2" name="wpsl_address2" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_address2', true)) . '" maxlength="200">';
-        echo '</div>';
-        
-        echo '<div class="form-row">';
-        echo '<div class="form-group form-group-half">';
-        echo '<label for="wpsl_city">' . __('City', 'storelocator-list') . '</label>';
-        echo '<input type="text" id="wpsl_city" name="wpsl_city" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_city', true)) . '" maxlength="100">';
-        echo '</div>';
-        
-        echo '<div class="form-group form-group-half">';
-        echo '<label for="wpsl_state">' . __('State/Province', 'storelocator-list') . '</label>';
-        echo '<input type="text" id="wpsl_state" name="wpsl_state" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_state', true)) . '" maxlength="100">';
-        echo '</div>';
-        echo '</div>';
-        
-        echo '<div class="form-group">';
-        echo '<label for="wpsl_zip">' . __('ZIP/Postal Code', 'storelocator-list') . '</label>';
-        echo '<input type="text" id="wpsl_zip" name="wpsl_zip" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_zip', true)) . '" maxlength="20">';
-        echo '</div>';
-        
-        echo '</fieldset>';
+        if ($has_address_fields) {
+            echo '<fieldset>';
+            echo '<legend>' . __('Address Information', 'storelocator-list') . '</legend>';
+            
+            // Street Address
+            if (\StoreLocatorList\Admin\SLList_Settings::is_field_available('wpsl_address')) {
+                $field_config = $available_fields['wpsl_address'];
+                $required = !empty($field_config['required']) ? ' <span class="required">*</span>' : '';
+                $required_attr = !empty($field_config['required']) ? 'required' : '';
+                
+                echo '<div class="form-group">';
+                echo '<label for="wpsl_address">' . esc_html($field_config['label']) . $required . '</label>';
+                echo '<input type="text" id="wpsl_address" name="wpsl_address" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_address', true)) . '" maxlength="200" ' . $required_attr . '>';
+                echo '</div>';
+            }
+            
+            // Address Line 2
+            if (\StoreLocatorList\Admin\SLList_Settings::is_field_available('wpsl_address2')) {
+                $field_config = $available_fields['wpsl_address2'];
+                $required = !empty($field_config['required']) ? ' <span class="required">*</span>' : '';
+                $required_attr = !empty($field_config['required']) ? 'required' : '';
+                
+                echo '<div class="form-group">';
+                echo '<label for="wpsl_address2">' . esc_html($field_config['label']) . $required . '</label>';
+                echo '<input type="text" id="wpsl_address2" name="wpsl_address2" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_address2', true)) . '" maxlength="200" ' . $required_attr . '>';
+                echo '</div>';
+            }
+            
+            // City and State row
+            $has_city = \StoreLocatorList\Admin\SLList_Settings::is_field_available('wpsl_city');
+            $has_state = \StoreLocatorList\Admin\SLList_Settings::is_field_available('wpsl_state');
+            
+            if ($has_city || $has_state) {
+                echo '<div class="form-row">';
+                
+                if ($has_city) {
+                    $field_config = $available_fields['wpsl_city'];
+                    $required = !empty($field_config['required']) ? ' <span class="required">*</span>' : '';
+                    $required_attr = !empty($field_config['required']) ? 'required' : '';
+                    
+                    echo '<div class="form-group form-group-half">';
+                    echo '<label for="wpsl_city">' . esc_html($field_config['label']) . $required . '</label>';
+                    echo '<input type="text" id="wpsl_city" name="wpsl_city" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_city', true)) . '" maxlength="100" ' . $required_attr . '>';
+                    echo '</div>';
+                }
+                
+                if ($has_state) {
+                    $field_config = $available_fields['wpsl_state'];
+                    $required = !empty($field_config['required']) ? ' <span class="required">*</span>' : '';
+                    $required_attr = !empty($field_config['required']) ? 'required' : '';
+                    
+                    echo '<div class="form-group form-group-half">';
+                    echo '<label for="wpsl_state">' . esc_html($field_config['label']) . $required . '</label>';
+                    echo '<input type="text" id="wpsl_state" name="wpsl_state" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_state', true)) . '" maxlength="100" ' . $required_attr . '>';
+                    echo '</div>';
+                }
+                
+                echo '</div>';
+            }
+            
+            // ZIP Code
+            if (\StoreLocatorList\Admin\SLList_Settings::is_field_available('wpsl_zip')) {
+                $field_config = $available_fields['wpsl_zip'];
+                $required = !empty($field_config['required']) ? ' <span class="required">*</span>' : '';
+                $required_attr = !empty($field_config['required']) ? 'required' : '';
+                
+                echo '<div class="form-group">';
+                echo '<label for="wpsl_zip">' . esc_html($field_config['label']) . $required . '</label>';
+                echo '<input type="text" id="wpsl_zip" name="wpsl_zip" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_zip', true)) . '" maxlength="20" ' . $required_attr . '>';
+                echo '</div>';
+            }
+            
+            echo '</fieldset>';
+        }
         
         // Contact Information
-        echo '<fieldset>';
-        echo '<legend>' . __('Contact Information', 'storelocator-list') . '</legend>';
+        $contact_fields = array('wpsl_phone', 'wpsl_email', 'wpsl_url');
+        $has_contact_fields = false;
+        foreach ($contact_fields as $field) {
+            if (\StoreLocatorList\Admin\SLList_Settings::is_field_available($field)) {
+                $has_contact_fields = true;
+                break;
+            }
+        }
         
-        echo '<div class="form-group">';
-        echo '<label for="wpsl_phone">' . __('Phone Number', 'storelocator-list') . '</label>';
-        echo '<input type="tel" id="wpsl_phone" name="wpsl_phone" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_phone', true)) . '" maxlength="50">';
-        echo '</div>';
-        
-        echo '<div class="form-group">';
-        echo '<label for="wpsl_email">' . __('Email Address', 'storelocator-list') . '</label>';
-        echo '<input type="email" id="wpsl_email" name="wpsl_email" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_email', true)) . '" maxlength="100">';
-        echo '<p class="help-text">' . __('This email will be used for future access requests.', 'storelocator-list') . '</p>';
-        echo '</div>';
-        
-        echo '<div class="form-group">';
-        echo '<label for="wpsl_url">' . __('Website URL', 'storelocator-list') . '</label>';
-        echo '<input type="url" id="wpsl_url" name="wpsl_url" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_url', true)) . '" maxlength="200">';
-        echo '</div>';
-        
-        echo '</fieldset>';
+        if ($has_contact_fields) {
+            echo '<fieldset>';
+            echo '<legend>' . __('Contact Information', 'storelocator-list') . '</legend>';
+            
+            // Phone Number
+            if (\StoreLocatorList\Admin\SLList_Settings::is_field_available('wpsl_phone')) {
+                $field_config = $available_fields['wpsl_phone'];
+                $required = !empty($field_config['required']) ? ' <span class="required">*</span>' : '';
+                $required_attr = !empty($field_config['required']) ? 'required' : '';
+                
+                echo '<div class="form-group">';
+                echo '<label for="wpsl_phone">' . esc_html($field_config['label']) . $required . '</label>';
+                echo '<input type="tel" id="wpsl_phone" name="wpsl_phone" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_phone', true)) . '" maxlength="50" ' . $required_attr . '>';
+                echo '</div>';
+            }
+            
+            // Email Address
+            if (\StoreLocatorList\Admin\SLList_Settings::is_field_available('wpsl_email')) {
+                $field_config = $available_fields['wpsl_email'];
+                $required = !empty($field_config['required']) ? ' <span class="required">*</span>' : '';
+                $required_attr = !empty($field_config['required']) ? 'required' : '';
+                
+                echo '<div class="form-group">';
+                echo '<label for="wpsl_email">' . esc_html($field_config['label']) . $required . '</label>';
+                echo '<input type="email" id="wpsl_email" name="wpsl_email" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_email', true)) . '" maxlength="100" ' . $required_attr . '>';
+                echo '<p class="help-text">' . __('This email will be used for future access requests.', 'storelocator-list') . '</p>';
+                echo '</div>';
+            }
+            
+            // Website URL
+            if (\StoreLocatorList\Admin\SLList_Settings::is_field_available('wpsl_url')) {
+                $field_config = $available_fields['wpsl_url'];
+                $required = !empty($field_config['required']) ? ' <span class="required">*</span>' : '';
+                $required_attr = !empty($field_config['required']) ? 'required' : '';
+                
+                echo '<div class="form-group">';
+                echo '<label for="wpsl_url">' . esc_html($field_config['label']) . $required . '</label>';
+                echo '<input type="url" id="wpsl_url" name="wpsl_url" value="' . esc_attr(get_post_meta($store->ID, 'wpsl_url', true)) . '" maxlength="200" ' . $required_attr . '>';
+                echo '</div>';
+            }
+            
+            echo '</fieldset>';
+        }
         
         // Submit buttons
         echo '<div class="form-actions">';
         echo '<button type="submit" class="button button-primary button-large">' . __('Update Store Details', 'storelocator-list') . '</button>';
-        echo '<a href="' . home_url('/store-manager/') . '" class="button button-secondary">' . __('Cancel', 'storelocator-list') . '</a>';
+        $store_manager_url = \StoreLocatorList\PublicPages\SLList_Store_Search::get_store_manager_url();
+        echo '<a href="' . $store_manager_url . '" class="button button-secondary">' . __('Cancel', 'storelocator-list') . '</a>';
         echo '</div>';
         
         echo '</form>';
@@ -857,10 +972,9 @@ class SLList_Store_Update {
             return;
         }
         
-        $subject = sprintf(
-            __('Store Details Updated - %s', 'storelocator-list'),
-            get_bloginfo('name')
-        );
+        $subject_template = \StoreLocatorList\Admin\SLList_Settings::get_setting('confirmation_email_subject', 'Store Details Updated Successfully - {store_name}');
+        $subject = str_replace('{store_name}', $store_data['store_name'], $subject_template);
+        $subject = str_replace('{site_name}', get_bloginfo('name'), $subject);
         
         $message = $this->get_confirmation_email_template($store, $store_data);
         
@@ -884,32 +998,48 @@ class SLList_Store_Update {
         $site_name = get_bloginfo('name');
         $update_date = date_i18n(get_option('date_format') . ' ' . get_option('time_format'));
         
-        return '
+        // Get customizable content from settings
+        $email_header = \StoreLocatorList\Admin\SLList_Settings::get_setting('confirmation_email_header', 'Store Details Updated Successfully');
+        $email_intro = \StoreLocatorList\Admin\SLList_Settings::get_setting('confirmation_email_intro', 'Your store details have been successfully updated on {site_name} at {update_date}.');
+        $security_info = \StoreLocatorList\Admin\SLList_Settings::get_setting('confirmation_email_security_info', 'Your access token has been automatically deactivated for security. If you need to make additional changes, please request new access from the store manager page.');
+        
+        // Get email styling from settings
+        $header_color = \StoreLocatorList\Admin\SLList_Settings::get_setting('email_header_color', '#f8f9fa');
+        $button_color = \StoreLocatorList\Admin\SLList_Settings::get_setting('email_button_color', '#0073aa');
+        
+        // Replace placeholders
+        $email_intro = str_replace('{site_name}', $site_name, $email_intro);
+        $email_intro = str_replace('{store_name}', $store_name, $email_intro);
+        $email_intro = str_replace('{update_date}', $update_date, $email_intro);
+        
+        $store_manager_url = \StoreLocatorList\PublicPages\SLList_Store_Search::get_store_manager_url();
+        
+        $message = '
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>' . esc_html($subject ?? '') . '</title>
+            <title>' . esc_html($email_header) . '</title>
             <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+                .header { background: ' . esc_attr($header_color) . '; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
                 .content { padding: 20px 0; }
-                .button { display: inline-block; background: #0073aa; color: white !important; padding: 12px 20px; text-decoration: none; border-radius: 3px; margin: 10px 0; }
+                .button { display: inline-block; background: ' . esc_attr($button_color) . '; color: white !important; padding: 12px 20px; text-decoration: none; border-radius: 3px; margin: 10px 0; }
                 .success { background: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 3px; margin: 15px 0; }
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Store Details Updated Successfully</h1>
+                    <h1>' . esc_html($email_header) . '</h1>
                     <p>Confirmation for: <strong>' . $store_name . '</strong></p>
                 </div>
                 
                 <div class="content">
                     <div class="success">
                         <h3>✓ Update Confirmed</h3>
-                        <p>Your store details have been successfully updated on ' . esc_html($site_name) . ' at ' . $update_date . '.</p>
+                        <p>' . esc_html($email_intro) . '</p>
                     </div>
                     
                     <h3>Updated Information:</h3>
@@ -936,14 +1066,16 @@ class SLList_Store_Update {
                     </ul>
                     
                     <h3>Security Information:</h3>
-                    <p>Your access token has been automatically deactivated for security. If you need to make additional changes, please request new access from the store manager page.</p>
+                    <p>' . esc_html($security_info) . '</p>
                     
-                    <a href="' . home_url('/store-manager/') . '" class="button">Request New Access</a>
+                    <a href="' . esc_url($store_manager_url) . '" class="button">Request New Access</a>
                     
                     <p><small>If you did not make these changes, please contact us immediately at ' . get_option('admin_email') . '</small></p>
                 </div>
             </div>
         </body>
         </html>';
+        
+        return $message;
     }
 }

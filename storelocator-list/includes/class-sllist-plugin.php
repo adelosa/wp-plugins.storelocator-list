@@ -91,6 +91,9 @@ class SLList_Plugin {
         require_once $this->plugin_path . 'includes/public/class-sllist-store-search.php';
         require_once $this->plugin_path . 'includes/public/class-sllist-store-update.php';
         
+        // Settings class (needed on frontend for configuration access)
+        require_once $this->plugin_path . 'includes/admin/class-sllist-settings.php';
+        
         // Admin classes
         if (is_admin()) {
             require_once $this->plugin_path . 'includes/admin/class-sllist-import-export.php';
@@ -104,7 +107,8 @@ class SLList_Plugin {
         // Load text domain for internationalization
         load_plugin_textdomain('storelocator-list', false, dirname(plugin_basename($this->plugin_path . 'storelocator-list.php')) . '/languages');
         
-        // Note: Rewrite rules are now handled at the plugin level for early registration
+        // Add rewrite rules after settings are loaded
+        $this->add_rewrite_rules();
         
         // Initialize core components
         new Core\SLList_Shortcodes();
@@ -116,13 +120,52 @@ class SLList_Plugin {
         // Initialize admin components
         if (is_admin()) {
             new Admin\SLList_Import_Export();
+            // Only initialize admin UI in admin context, but settings class is already loaded
+            if (!wp_doing_ajax()) {
+                new Admin\SLList_Settings();
+            }
         }
         
-        // Check if we need to flush rewrite rules
+        // Check if we need to flush rewrite rules (after settings have been loaded)
         if (get_option('sllist_flush_rewrite_rules', false)) {
-            flush_rewrite_rules(true);
-            delete_option('sllist_flush_rewrite_rules');
+            // Add a hook to flush after all plugins are loaded
+            add_action('wp_loaded', array($this, 'flush_rewrite_rules_if_needed'));
         }
+    }
+    
+    /**
+     * Add rewrite rules with access to settings
+     */
+    public function add_rewrite_rules() {
+        // Get permalink settings
+        $store_manager_permalink = \StoreLocatorList\Admin\SLList_Settings::get_setting('store_manager_permalink', 'store-manager');
+        $store_update_permalink = \StoreLocatorList\Admin\SLList_Settings::get_setting('update_permalink', 'update-store');
+        
+        // Sanitize permalinks
+        $store_manager_permalink = sanitize_title($store_manager_permalink);
+        $store_update_permalink = sanitize_title($store_update_permalink);
+        
+        // Add rewrite rule for store manager page
+        add_rewrite_rule(
+            '^' . preg_quote($store_manager_permalink, '/') . '/?$',
+            'index.php?sllist_page=store_manager',
+            'top'
+        );
+        
+        // Add rewrite rule for store update page
+        add_rewrite_rule(
+            '^' . preg_quote($store_update_permalink, '/') . '/?$',
+            'index.php?sllist_page=store_update',
+            'top'
+        );
+    }
+    
+    /**
+     * Flush rewrite rules if needed
+     */
+    public function flush_rewrite_rules_if_needed() {
+        flush_rewrite_rules(true);
+        delete_option('sllist_flush_rewrite_rules');
     }
     
     /**

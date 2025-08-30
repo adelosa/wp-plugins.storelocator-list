@@ -47,7 +47,9 @@ class SLList_Store_Search {
      */
     public static function get_store_manager_url($use_pretty_url = true) {
         if ($use_pretty_url) {
-            return home_url('/store-manager/');
+            // Get permalink from settings, with fallback
+            $permalink = \StoreLocatorList\Admin\SLList_Settings::get_setting('store_manager_permalink', 'store-manager');
+            return home_url('/' . $permalink . '/');
         } else {
             return home_url('/?sllist_page=store_manager');
         }
@@ -203,10 +205,11 @@ class SLList_Store_Search {
         
         // Show access URLs for convenience (only for admins)
         if (current_user_can('manage_options')) {
+            $permalink = \StoreLocatorList\Admin\SLList_Settings::get_setting('store_manager_permalink', 'store-manager');
             echo '<div class="sllist-admin-notice" style="background: #f0f0f1; border: 1px solid #c3c4c7; padding: 10px; margin-bottom: 20px; border-radius: 4px;">';
             echo '<p><strong>Admin Notice:</strong> This store search page can be accessed via:</p>';
             echo '<ul>';
-            echo '<li><strong>Pretty URL:</strong> <code>' . home_url('/store-manager/') . '</code></li>';
+            echo '<li><strong>Pretty URL:</strong> <code>' . home_url('/' . $permalink . '/') . '</code></li>';
             echo '<li><strong>Alternative URL:</strong> <code>' . home_url('/?sllist_page=store_manager') . '</code></li>';
             echo '</ul>';
             echo '<p><em>If the pretty URL doesn\'t work, go to Settings → Permalinks and click "Save Changes" to flush rewrite rules.</em></p>';
@@ -233,10 +236,13 @@ class SLList_Store_Search {
      * Render the store search form
      */
     private function render_search_form() {
+        $page_title = \StoreLocatorList\Admin\SLList_Settings::get_setting('store_manager_title', 'Store Manager Access');
+        $instructions = \StoreLocatorList\Admin\SLList_Settings::get_setting('store_manager_instructions', 'Search for your store to request access to update your details.');
+        $search_placeholder = \StoreLocatorList\Admin\SLList_Settings::get_setting('store_manager_search_placeholder', 'Enter store name, email, address, or phone...');
         ?>
         <div class="sllist-search-header">
-            <h1><?php echo esc_html__('Store Manager Access', 'storelocator-list'); ?></h1>
-            <p><?php echo esc_html__('Search for your store to request access to update your details.', 'storelocator-list'); ?></p>
+            <h1><?php echo esc_html($page_title); ?></h1>
+            <p><?php echo esc_html($instructions); ?></p>
         </div>
         
         <div class="sllist-search-form">
@@ -248,7 +254,7 @@ class SLList_Store_Search {
                     <input type="text" 
                            id="search_term" 
                            name="search_term" 
-                           placeholder="<?php echo esc_attr__('Enter store name, email, address, or phone...', 'storelocator-list'); ?>"
+                           placeholder="<?php echo esc_attr($search_placeholder); ?>"
                            class="sllist-search-input" 
                            required>
                 </div>
@@ -487,10 +493,9 @@ class SLList_Store_Search {
         $access_url = \StoreLocatorList\PublicPages\SLList_Store_Update::get_store_update_url($credentials['token']);
         
         // Email subject
-        $subject = sprintf(
-            __('Store Update Access - %s', 'storelocator-list'),
-            $store_name
-        );
+        $subject_template = \StoreLocatorList\Admin\SLList_Settings::get_setting('access_email_subject', 'Store Update Access - {store_name}');
+        $subject = str_replace('{store_name}', $store_name, $subject_template);
+        $subject = str_replace('{site_name}', get_bloginfo('name'), $subject);
         
         // Email content
         $message = $this->get_access_email_template($store, $credentials, $access_url);
@@ -519,34 +524,62 @@ class SLList_Store_Search {
         $expires_date = date('F j, Y \a\t g:i A', $credentials['expires']);
         $site_name = get_bloginfo('name');
         
+        // Get customizable content from settings
+        $email_header = \StoreLocatorList\Admin\SLList_Settings::get_setting('access_email_header', 'Store Update Access Request');
+        $email_greeting = \StoreLocatorList\Admin\SLList_Settings::get_setting('access_email_greeting', 'Hello,');
+        $email_intro = \StoreLocatorList\Admin\SLList_Settings::get_setting('access_email_intro', 'You have requested access to update your store details on {site_name}. Please use the following credentials to access your store update page:');
+        $button_text = \StoreLocatorList\Admin\SLList_Settings::get_setting('access_email_button_text', 'Update Your Store Details');
+        $url_instructions = \StoreLocatorList\Admin\SLList_Settings::get_setting('access_email_instructions', 'If the button above doesn\'t work, copy and paste this URL into your browser:');
+        $updatable_fields = \StoreLocatorList\Admin\SLList_Settings::get_setting('access_email_updatable_fields', 'Store name and description|Address and contact information|Phone number and email|Business hours');
+        $security_notice = \StoreLocatorList\Admin\SLList_Settings::get_setting('access_email_security_notice', 'If you did not request this access, please ignore this email. The access will expire automatically.');
+        
+        // Get email styling from settings
+        $header_color = \StoreLocatorList\Admin\SLList_Settings::get_setting('email_header_color', '#f8f9fa');
+        $button_color = \StoreLocatorList\Admin\SLList_Settings::get_setting('email_button_color', '#007cba');
+        $warning_color = \StoreLocatorList\Admin\SLList_Settings::get_setting('email_warning_color', '#fff3cd');
+        
+        // Replace placeholders
+        $email_intro = str_replace('{site_name}', $site_name, $email_intro);
+        $email_intro = str_replace('{store_name}', $store_name, $email_intro);
+        
+        // Convert updatable fields to list
+        $fields_array = explode('|', $updatable_fields);
+        $fields_html = '';
+        foreach ($fields_array as $field) {
+            $field = trim($field);
+            if (!empty($field)) {
+                $fields_html .= '<li>' . esc_html($field) . '</li>';
+            }
+        }
+        
         $template = '
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>' . esc_html($subject ?? '') . '</title>
+            <title>' . esc_html($email_header) . '</title>
             <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: #f8f9fa; padding: 20px; text-align: center; border-radius: 5px; }
+                .header { background: ' . esc_attr($header_color) . '; padding: 20px; text-align: center; border-radius: 5px; }
                 .content { padding: 20px 0; }
                 .credentials { background: #e9ecef; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                .button { display: inline-block; background: #007cba; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                .button { display: inline-block; background: ' . esc_attr($button_color) . '; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
                 .footer { font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; }
-                .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 3px; margin: 15px 0; }
+                .warning { background: ' . esc_attr($warning_color) . '; border: 1px solid #ffeaa7; padding: 10px; border-radius: 3px; margin: 15px 0; }
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Store Update Access Request</h1>
+                    <h1>' . esc_html($email_header) . '</h1>
                     <p>Access granted for: <strong>' . $store_name . '</strong></p>
                 </div>
                 
                 <div class="content">
-                    <p>Hello,</p>
+                    <p>' . esc_html($email_greeting) . '</p>
                     
-                    <p>You have requested access to update your store details on ' . esc_html($site_name) . '. Please use the following credentials to access your store update page:</p>
+                    <p>' . esc_html($email_intro) . '</p>
                     
                     <div class="credentials">
                         <h3>Your Access Credentials:</h3>
@@ -559,24 +592,21 @@ class SLList_Store_Search {
                     </div>
                     
                     <p style="text-align: center;">
-                        <a href="' . esc_url($access_url) . '" class="button">Update Your Store Details</a>
+                        <a href="' . esc_url($access_url) . '" class="button">' . esc_html($button_text) . '</a>
                     </p>
                     
-                    <p>If the button above doesn\'t work, copy and paste this URL into your browser:</p>
+                    <p>' . esc_html($url_instructions) . '</p>
                     <p style="word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 3px;">
                         ' . esc_url($access_url) . '
                     </p>
                     
                     <h3>What you can update:</h3>
                     <ul>
-                        <li>Store name and description</li>
-                        <li>Address and contact information</li>
-                        <li>Phone number and email</li>
-                        <li>Business hours</li>
+                        ' . $fields_html . '
                     </ul>
                     
                     <div class="warning">
-                        <strong>Security Notice:</strong> If you did not request this access, please ignore this email. The access will expire automatically.
+                        <strong>Security Notice:</strong> ' . esc_html($security_notice) . '
                     </div>
                 </div>
                 
